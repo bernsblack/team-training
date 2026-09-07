@@ -52,10 +52,12 @@ main{padding:.8rem}
 .muted{color:#666;font-size:.9rem}
 .err{color:#c62828;font-weight:600}
 .fin{color:#2e7d32;font-weight:700}
-.rep{display:flex;align-items:center;gap:.4rem;padding:.35rem 0;border-top:1px solid #eee}
+.rep{padding:.5rem 0;border-top:1px solid #eee}
+.rep .top{display:flex;align-items:baseline;gap:.4rem}
 .rep .nm{flex:1;font-weight:600}
 .rep .ct{font-variant-numeric:tabular-nums;min-width:4.4rem;text-align:right;font-weight:700}
-.rep button{min-height:46px;min-width:46px;padding:0 .6rem;font-size:1rem;border-radius:10px}
+.rep .btns{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;margin-top:.4rem}
+.rep button{min-height:56px;min-width:56px;width:100%;padding:0 .4rem;font-size:1.05rem;border-radius:10px}
 .rep.ok .ct{color:#2e7d32}
 label.chk{display:flex;gap:.7rem;align-items:center;padding:.6rem 0;border-top:1px solid #eee;font-size:1.05rem}
 label.chk:first-of-type{border-top:0}
@@ -523,10 +525,12 @@ function bodyB2(){
     ${fin!=null?`<p class="fin">Finished at ${fmt(fin)}</p>`:''}
     ${BANK.map(([nm,tg],i)=>`
     <div class="rep ${c[i]>=tg?'ok':''}">
-      <span class="nm">${nm}</span><span class="ct">${c[i]} / ${tg}</span>
-      <button class="sec" data-a="b2" data-t="${ti}" data-i="${i}" data-d="-1" ${dis(T&&c[i]>0)}>−</button>
-      <button data-a="b2" data-t="${ti}" data-i="${i}" data-d="1" ${dis(T)}>+1</button>
-      <button data-a="b2" data-t="${ti}" data-i="${i}" data-d="5" ${dis(T)}>+5</button>
+      <div class="top"><span class="nm">${nm}</span><span class="ct">${c[i]} / ${tg}</span></div>
+      <div class="btns">
+        <button class="sec" data-a="b2" data-t="${ti}" data-i="${i}" data-d="-1" ${dis(T&&c[i]>0)}>−</button>
+        <button data-a="b2" data-t="${ti}" data-i="${i}" data-d="1" ${dis(T)}>+1</button>
+        <button data-a="b2" data-t="${ti}" data-i="${i}" data-d="5" ${dis(T)}>+5</button>
+      </div>
     </div>`).join('')}
   </div>`;}).join('');
   return cards+`
