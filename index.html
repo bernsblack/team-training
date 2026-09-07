@@ -91,8 +91,8 @@ nav.foot button{flex:1}
 // ---------- Supabase config (rooms) ----------
 // Project URL and anon public key from Supabase → Project Settings → API.
 // Leave both empty to run the page in local-only mode.
-const SUPABASE_URL='';
-const SUPABASE_KEY='';
+const SUPABASE_URL='https://uhaotjjjrfpbcfsyqobo.supabase.co';
+const SUPABASE_KEY='sb_publishable_7U_qGhTjwI2C3OE_-n4wLA_r4xtcnuI';
 
 const KEY='team-training-v1';
 // A stable id per phone, so a room can tell whose write a row is.
@@ -314,7 +314,9 @@ function roomConnect(){
       save();render();
     })
     .subscribe(status=>{
-      if(status==='SUBSCRIBED'){conn='on';roomSync();}
+      // The realtime worker can attach a few seconds after SUBSCRIBED and
+      // miss writes in that window, so sync once more shortly after.
+      if(status==='SUBSCRIBED'){conn='on';roomSync();setTimeout(roomSync,6000);}
       else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')conn='error';
       else if(status==='CLOSED')conn='off';
       renderStatus();

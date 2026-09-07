@@ -1,7 +1,7 @@
 import {JSDOM} from 'jsdom';
 import fs from 'node:fs';
 let html=fs.readFileSync(new URL('../index.html',import.meta.url).pathname,'utf8');
-html=html.replace("const SUPABASE_URL='';","const SUPABASE_URL='http://stub';").replace("const SUPABASE_KEY='';","const SUPABASE_KEY='k';");
+html=html.replace(/const SUPABASE_URL='[^']*';/,"const SUPABASE_URL='http://stub';").replace(/const SUPABASE_KEY='[^']*';/,"const SUPABASE_KEY='k';");
 const ok=(c,m)=>{if(!c){console.error('FAIL',m);process.exitCode=1;}else console.log('ok  ',m);};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
