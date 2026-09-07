@@ -48,6 +48,9 @@ ok(txt().includes('Scores'),'scoreboard present in block');
 // block 2
 click('[data-a="goto"][data-i="4"]');
 ok($('#clock').textContent==='12:00','block 2 clock 12:00');
+click('[data-a="goto"][data-i="3"]');
+ok(txt().includes('Next: Bank the Reps')&&txt().includes('50 push-ups')&&txt().includes('Split the reps'),'water break shows the next block plan');
+click('[data-a="goto"][data-i="4"]');
 const plus5=(t,i)=>click(`[data-a="b2"][data-t="${t}"][data-i="${i}"][data-d="5"]`);
 const plus1=(t,i)=>click(`[data-a="b2"][data-t="${t}"][data-i="${i}"][data-d="1"]`);
 const targets=[75,50,50,20,30,15];

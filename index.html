@@ -148,13 +148,13 @@ const DEVICE=(()=>{
 const PHASES=[
   {id:'warm',short:'Warm-up',slot:'0–9',name:'Warm-up',mins:9,kind:'warm'},
   {id:'w1',short:'Water',slot:'9–12',name:'Water',mins:3,kind:'water',
-   prep:'Next: Block 1 — Relay Ladder. Set a cone 30 m out. Each team lines up at the start.'},
+   prep:'Set a cone 30 m out. Each team lines up at the start. Agree the runner order.'},
   {id:'b1',short:'Block 1',slot:'12–22',name:'Relay Ladder',mins:8,kind:'b1'},
   {id:'w2',short:'Water',slot:'22–26',name:'Water',mins:4,kind:'water',
-   prep:'Next: Block 2 — Bank the Reps. 12 minute cap. Teams plan their split now.'},
+   prep:'Plan the split now: who takes what, and who calls the total.'},
   {id:'b2',short:'Block 2',slot:'26–39',name:'Bank the Reps',mins:12,kind:'b2'},
   {id:'w3',short:'Water',slot:'39–43',name:'Water',mins:4,kind:'water',
-   prep:'Next: Block 3 — Last Man Home. Cones at 10 m, 20 m, 30 m and 40 m.'},
+   prep:'Set cones at 10 m, 20 m, 30 m and 40 m. Both teams start together.'},
   {id:'b3',short:'Block 3',slot:'43–51',name:'Last Man Home',mins:8,kind:'b3'},
   {id:'cool',short:'Cooldown',slot:'51–60',name:'Cooldown + scores',mins:9,kind:'cool'}
 ];
@@ -558,10 +558,31 @@ function roomCard(){
   </div>`;
 }
 
-// Block explainer: open until the block clock starts, then folds away.
-function explainer(title,body){
-  const {t}=cur();
-  return `<details class="card explain" ${elapsed(t)===0?'open':''}><summary>${title}</summary>${body}</details>`;
+// Block explainers. Shown on the block screen (folded once the clock runs)
+// and on the water break before it, so the team can plan.
+const EXPLAIN={
+  b1:{title:'How it runs',body:()=>`
+    <p>One man runs at a time: 30 m out and back. On his return he does the exercise, then tags the next man. 3 runners = 1 leg.</p>
+    <ol>${LADDER.map(l=>`<li>${l}</li>`).join('')}</ol>
+    <p class="muted">Score: legs completed in 8 minutes. Part-finished legs do not count.</p>`},
+  b2:{title:'The rules',body:()=>`
+    <p>Bank this total as a team, in any order, within 12 minutes:</p>
+    <ul>${BANK.map(([n,t])=>`<li>${t} ${n.toLowerCase()}</li>`).join('')}</ul>
+    <ul>
+      <li>Split the reps however you want across the 3 of you.</li>
+      <li>Only one man on a given exercise at a time. All 3 can work on different exercises at once.</li>
+      <li>Count out loud. One man calls the running total.</li>
+      <li>Lunges: each leg counts as 1.</li>
+    </ul>
+    <p class="muted">Score: first team finished. If neither finishes, most total reps at the 12 minute cap.</p>`},
+  b3:{title:'The rule that matters',body:()=>`
+    <p>Cones at 10 m, 20 m, 30 m and 40 m. A shuttle: run to each cone and back, in order.</p>
+    <p>All 3 run at the same time. The team time is the <strong>last man across the line</strong>. Anyone who finishes turns around and runs the last stretch in with whoever is still out there.</p>
+    <p class="muted">1 round only. The clock starts both teams together.</p>`}
+};
+function explainer(kind){
+  const {t}=cur(), x=EXPLAIN[kind];
+  return `<details class="card explain" ${elapsed(t)===0?'open':''}><summary>${x.title}</summary>${x.body()}</details>`;
 }
 function resetCard(label){
   return `<div class="card" style="padding:.5rem .9rem"><button class="ghost hold" data-a="resetblock" data-hold="resetblock" ${dis(S.own.host)}><i class="holdfill"></i><span class="holdlabel">${label}</span></button></div>`;
@@ -586,7 +607,9 @@ function bodyWarm(){
 }
 
 function bodyWater(p){
-  return `<div class="card"><h3>Water</h3><p>${esc(p.prep)}</p></div>`;
+  const next=PHASES[S.phase+1], x=next&&EXPLAIN[next.kind];
+  const plan=x?`<details class="card explain" open><summary>Next: ${esc(next.name)} · ${x.title}</summary>${x.body()}</details>`:'';
+  return `<div class="card"><h3>Water</h3><p>${esc(p.prep)}</p></div>${plan}`;
 }
 
 function bodyB1(){
@@ -606,11 +629,7 @@ function bodyB1(){
     <button class="big" data-a="b1run" data-t="${ti}" ${dis(T)}>Runner back</button>
     <button class="ghost" data-a="b1undo" data-t="${ti}" ${dis(T&&!(x.runner===0&&x.legs===0))}>Undo</button>
   </div>`;}).join('');
-  return explainer('How it runs',`
-    <p>One man runs at a time: 30 m out and back. On his return he does the exercise, then tags the next man. 3 runners = 1 leg.</p>
-    <ol>${LADDER.map(l=>`<li>${l}</li>`).join('')}</ol>
-    <p class="muted">Score: legs completed in 8 minutes. Part-finished legs do not count.</p>`)
-  +cards+resetCard('Hold to reset block 1');
+  return explainer('b1')+cards+resetCard('Hold to reset block 1');
 }
 
 function bodyB2(){
@@ -632,15 +651,7 @@ function bodyB2(){
       </div>
     </div>`).join('')}
   </div>`;}).join('');
-  return explainer('The rules',`
-    <ul>
-      <li>Split the reps however you want across the 3 of you.</li>
-      <li>Only one man on a given exercise at a time. All 3 can work on different exercises at once.</li>
-      <li>Count out loud. One man calls the running total.</li>
-      <li>Lunges: each leg counts as 1.</li>
-    </ul>
-    <p class="muted">Score: first team finished. If neither finishes, most total reps at the 12 minute cap.</p>`)
-  +cards+resetCard('Hold to reset block 2');
+  return explainer('b2')+cards+resetCard('Hold to reset block 2');
 }
 
 function bodyB3(t){
@@ -655,11 +666,7 @@ function bodyB3(t){
       ?`<button class="ghost" data-a="b3undo" data-t="${ti}" ${dis(T)}>Undo</button>`
       :`<button class="big" data-a="b3home" data-t="${ti}" ${dis(T&&t.running)}>Last man home</button>`}
   </div>`;}).join('');
-  return explainer('The rule that matters',`
-    <p>Cones at 10 m, 20 m, 30 m and 40 m. A shuttle: run to each cone and back, in order.</p>
-    <p>All 3 run at the same time. The team time is the <strong>last man across the line</strong>. Anyone who finishes turns around and runs the last stretch in with whoever is still out there.</p>
-    <p class="muted">1 round only. The clock starts both teams together.</p>`)
-  +cards+resetCard('Hold to reset block 3');
+  return explainer('b3')+cards+resetCard('Hold to reset block 3');
 }
 
 function bodyCool(){
