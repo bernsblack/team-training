@@ -48,6 +48,8 @@ main{padding:.8rem}
 .card{background:#fff;border-radius:16px;padding:.9rem;margin:.8rem 0;box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:5;display:flex;align-items:flex-end;justify-content:center}
 .modal .card{width:100%;max-width:520px;margin:0;border-radius:20px 20px 0 0;max-height:88vh;overflow-y:auto;padding-bottom:calc(.9rem + env(safe-area-inset-bottom))}
+.explain summary{font-weight:700}
+.explain p,.explain ol,.explain ul{margin:.4rem 0}
 .lock{background:#f4f4f0;border-radius:10px;padding:.6rem .8rem;font-size:.95rem}
 .card h3{margin:0 0 .5rem;font-size:1.05rem;display:flex;justify-content:space-between;align-items:baseline}
 .card p{margin:.4rem 0}
@@ -514,6 +516,14 @@ function roomCard(){
   </div>`;
 }
 
+// Block explainer: open until the block clock starts, then folds away.
+function explainer(title,body){
+  const {t}=cur();
+  return `<details class="card explain" ${elapsed(t)===0?'open':''}><summary>${title}</summary>${body}</details>`;
+}
+function resetCard(label){
+  return `<div class="card" style="padding:.5rem .9rem"><button class="ghost hold" data-a="resetblock" data-hold="resetblock" ${dis(S.own.host)}><i class="holdfill"></i><span class="holdlabel">${label}</span></button></div>`;
+}
 function memberName(ti,i){return (S.members[ti]&&S.members[ti][i])||'';}
 function bodyWarm(){
   const H=S.own.host;
@@ -554,13 +564,11 @@ function bodyB1(){
     <button class="big" data-a="b1run" data-t="${ti}" ${dis(T)}>Runner back</button>
     <button class="ghost" data-a="b1undo" data-t="${ti}" ${dis(T&&!(x.runner===0&&x.legs===0))}>Undo</button>
   </div>`;}).join('');
-  return cards+`
-  <div class="card"><h3>How it runs</h3>
+  return explainer('How it runs',`
     <p>One man runs at a time: 30 m out and back. On his return he does the exercise, then tags the next man. 3 runners = 1 leg.</p>
     <ol>${LADDER.map(l=>`<li>${l}</li>`).join('')}</ol>
-    <p class="muted">Score: legs completed in 8 minutes. Part-finished legs do not count.</p>
-    <button class="ghost hold" data-a="resetblock" data-hold="resetblock" ${dis(S.own.host)}><i class="holdfill"></i><span class="holdlabel">Hold to reset block 1</span></button>
-  </div>`;
+    <p class="muted">Score: legs completed in 8 minutes. Part-finished legs do not count.</p>`)
+  +cards+resetCard('Hold to reset block 1');
 }
 
 function bodyB2(){
@@ -582,17 +590,15 @@ function bodyB2(){
       </div>
     </div>`).join('')}
   </div>`;}).join('');
-  return cards+`
-  <div class="card"><h3>The rules</h3>
+  return explainer('The rules',`
     <ul>
       <li>Split the reps however you want across the 3 of you.</li>
       <li>Only one man on a given exercise at a time. All 3 can work on different exercises at once.</li>
       <li>Count out loud. One man calls the running total.</li>
       <li>Lunges: each leg counts as 1.</li>
     </ul>
-    <p class="muted">Score: first team finished. If neither finishes, most total reps at the 12 minute cap.</p>
-    <button class="ghost hold" data-a="resetblock" data-hold="resetblock" ${dis(S.own.host)}><i class="holdfill"></i><span class="holdlabel">Hold to reset block 2</span></button>
-  </div>`;
+    <p class="muted">Score: first team finished. If neither finishes, most total reps at the 12 minute cap.</p>`)
+  +cards+resetCard('Hold to reset block 2');
 }
 
 function bodyB3(t){
@@ -607,13 +613,11 @@ function bodyB3(t){
       ?`<button class="ghost" data-a="b3undo" data-t="${ti}" ${dis(T)}>Undo</button>`
       :`<button class="big" data-a="b3home" data-t="${ti}" ${dis(T&&t.running)}>Last man home</button>`}
   </div>`;}).join('');
-  return cards+`
-  <div class="card"><h3>The rule that matters</h3>
+  return explainer('The rule that matters',`
     <p>Cones at 10 m, 20 m, 30 m and 40 m. A shuttle: run to each cone and back, in order.</p>
     <p>All 3 run at the same time. The team time is the <strong>last man across the line</strong>. Anyone who finishes turns around and runs the last stretch in with whoever is still out there.</p>
-    <p class="muted">1 round only. The clock starts both teams together.</p>
-    <button class="ghost hold" data-a="resetblock" data-hold="resetblock" ${dis(S.own.host)}><i class="holdfill"></i><span class="holdlabel">Hold to reset block 3</span></button>
-  </div>`;
+    <p class="muted">1 round only. The clock starts both teams together.</p>`)
+  +cards+resetCard('Hold to reset block 3');
 }
 
 function bodyCool(){
