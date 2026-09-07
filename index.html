@@ -265,21 +265,44 @@ function unlockAudio(){
     audioUnlocked=true;
   }catch(e){}
 }
-function beep(n){
+function tone(freq,durMs,t0){
+  const o=ac.createOscillator(),g=ac.createGain();
+  o.type='square';o.frequency.value=freq;
+  o.connect(g);g.connect(ac.destination);
+  const dur=durMs/1000;
+  g.gain.setValueAtTime(0.0001,t0);
+  g.gain.exponentialRampToValueAtTime(0.4,t0+0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001,t0+Math.max(dur-0.03,0.02));
+  o.start(t0);o.stop(t0+dur);
+}
+function ensureAc(){
+  if(!ac)return false;
+  if(ac.state==='suspended')ac.resume();
+  return true;
+}
+// 1 minute left: 1 low tone, 1 pulse of vibration.
+function beepWarn(){
   try{
-    if(navigator.vibrate)navigator.vibrate(Array(n).fill(200).flatMap(v=>[v,120]));
-    if(!ac)return;
-    if(ac.state==='suspended')ac.resume();
-    for(let i=0;i<n;i++){
-      const o=ac.createOscillator(),g=ac.createGain();
-      o.type='square';o.frequency.value=880;
-      o.connect(g);g.connect(ac.destination);
-      const t0=ac.currentTime+i*0.3;
-      g.gain.setValueAtTime(0.0001,t0);
-      g.gain.exponentialRampToValueAtTime(0.4,t0+0.01);
-      g.gain.exponentialRampToValueAtTime(0.0001,t0+0.22);
-      o.start(t0);o.stop(t0+0.25);
-    }
+    if(navigator.vibrate)navigator.vibrate(200);
+    if(!ensureAc())return;
+    tone(440,300,ac.currentTime);
+  }catch(e){}
+}
+// time up: 3 high tones then 1 long low tone; vibration 3 short + 1 long.
+function beepEnd(){
+  try{
+    if(navigator.vibrate)navigator.vibrate([150,100,150,100,150,100,400]);
+    if(!ensureAc())return;
+    const t0=ac.currentTime;
+    for(let i=0;i<3;i++)tone(880,220,t0+i*0.3);
+    tone(330,600,t0+0.9);
+  }catch(e){}
+}
+// phase start (timer starts from 0): 1 short high tick.
+function beepTick(){
+  try{
+    if(!ensureAc())return;
+    tone(1200,80,ac.currentTime);
   }catch(e){}
 }
 let wakeLock=null;
@@ -660,8 +683,8 @@ setInterval(()=>{
   if(e===0){delete fired[p.id];return;}
   const f=fired[p.id]=fired[p.id]||{};
   if(t.running){
-    if(!f.b60&&rem<=60000&&p.kind!=='b3'){f.b60=true;beep(1);}
-    if(!f.b0&&rem<=0){f.b0=true;beep(3);}
+    if(!f.b60&&rem<=60000&&p.kind!=='b3'){f.b60=true;beepWarn();}
+    if(!f.b0&&rem<=0){f.b0=true;beepEnd();}
   }
 },200);
 
@@ -702,7 +725,12 @@ document.addEventListener('click',ev=>{
       }else roomMsg='Select the link text and copy it.';
       break;
     }
-    case 'start':startT(t);keepAwake();break;
+    case 'start':{
+      const fresh=t.acc===0&&!t.running;
+      startT(t);keepAwake();
+      if(fresh)beepTick();
+      break;
+    }
     case 'pause':pauseT(t);break;
     case 'resettimer':
       resetT(t);
