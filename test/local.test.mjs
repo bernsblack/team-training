@@ -23,6 +23,8 @@ ok(state().warm[0]===true,'warm checklist persists');
 // team rename
 const inp=$('[data-team="1"]'); inp.value='Team Rob'; inp.dispatchEvent(new w.Event('input',{bubbles:true}));
 ok(state().teams[1]==='Team Rob','team rename persists');
+const mi=$('[data-member="0:1"]'); mi.value='Piet'; mi.dispatchEvent(new w.Event('input',{bubbles:true}));
+ok(state().members[0][1]==='Piet','member rename persists');
 // go to block 1 (index 2)
 click('[data-a="goto"][data-i="2"]');
 ok(!state().timers.warm.running,'leaving a phase pauses its timer');
@@ -35,6 +37,10 @@ let s=state();
 ok(s.b1[0].legs===1&&s.b1[0].runner===0,'3 runners -> 1 leg');
 ok(s.timers.b1.running,'first tap auto-starts block timer');
 ok(txt().includes('Leg 2: 10 push-ups'),'next exercise shown');
+ok(txt().includes('Out now: Bernard'),'first runner of next leg shown');
+click('[data-a="b1run"][data-t="0"]');
+ok(txt().includes('Out now: Piet'),'second runner shown after first is back');
+click('[data-a="b1undo"][data-t="0"]');
 click('[data-a="b1undo"][data-t="0"]');
 s=state(); ok(s.b1[0].legs===0&&s.b1[0].runner===2,'undo across a leg boundary');
 click('[data-a="b1run"][data-t="0"]');

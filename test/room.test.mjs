@@ -36,6 +36,8 @@ function phone(url){
 
 // Phone A creates a room
 const A=phone('http://localhost/');
+ok(!A.$('[data-a="create"]'),'room card closed by default');
+A.click('[data-a="room"]');
 ok(A.$('[data-a="create"]'),'A sees create room');
 A.click('[data-a="create"]');
 await sleep(50);
@@ -51,6 +53,8 @@ await sleep(50);
 ok(B.state().room===code,'B joined via URL');
 ok(!B.state().own.host,'B is a viewer');
 ok(B.state().teams[0]===A.state().teams[0],'B got A team names: '+B.state().teams.join('/'));
+ok(B.state().members[1][2]==='Gert Jan','B got A members');
+ok(B.$('[data-member="0:0"]').disabled,'B cannot edit members');
 ok(B.$('[data-a="start"]').disabled,'B cannot start the clock');
 ok(B.$('[data-a="next"]').disabled,'B cannot change phase');
 ok(B.$('[data-chk="warm"]').disabled,'B cannot tick the checklist');

@@ -63,6 +63,12 @@ label.chk input{width:1.5rem;height:1.5rem;flex:0 0 auto}
 label.chk.done{color:#999;text-decoration:line-through}
 input[type=text]{font:inherit;font-weight:700;width:100%;padding:.6rem;border:1px solid #ccc;border-radius:10px;background:#fff;min-height:56px}
 input[type=text]:disabled{background:#f4f4f0;color:#666}
+input.member{font-weight:500;min-height:48px;padding:.4rem .5rem;font-size:.95rem}
+.members{display:flex;gap:.4rem;margin:.4rem 0 .8rem}
+.members>*{flex:1;min-width:0}
+.teamname{margin-top:.4rem}
+.next{font-size:1.1rem;margin:.2rem 0}
+button.slim{width:100%;min-height:48px;background:#fff;color:#111;border:2px solid #111;font-size:1rem}
 input.codein{text-transform:uppercase;letter-spacing:.2em;font-size:1.3rem;text-align:center}
 .dots{display:flex;gap:6px;margin:.4rem 0}
 .dots i{width:14px;height:14px;border-radius:50%;background:#ddd}
@@ -73,6 +79,7 @@ th{font-size:.9rem;color:#666}
 td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 td.win{font-weight:800;color:#2e7d32}
 details summary{cursor:pointer;font-size:1.05rem;padding:.2rem 0}
+details summary{list-style:none}
 details summary::-webkit-details-marker{display:none}
 details summary::before{content:"▸ ";color:#888}
 details[open] summary::before{content:"▾ "}
@@ -108,18 +115,18 @@ const PHASES=[
   {id:'warm',short:'Warm-up',slot:'0–9',name:'Warm-up',mins:9,kind:'warm'},
   {id:'w1',short:'Water',slot:'9–12',name:'Water',mins:3,kind:'water',
    prep:'Next: Block 1 — Relay Ladder. Set a cone 30 m out. Each team lines up at the start.'},
-  {id:'b1',short:'Block 1',slot:'12–22',name:'Block 1 · Relay Ladder',mins:8,kind:'b1'},
+  {id:'b1',short:'Block 1',slot:'12–22',name:'Relay Ladder',mins:8,kind:'b1'},
   {id:'w2',short:'Water',slot:'22–26',name:'Water',mins:4,kind:'water',
    prep:'Next: Block 2 — Bank the Reps. 12 minute cap. Teams plan their split now.'},
-  {id:'b2',short:'Block 2',slot:'26–39',name:'Block 2 · Bank the Reps',mins:12,kind:'b2'},
+  {id:'b2',short:'Block 2',slot:'26–39',name:'Bank the Reps',mins:12,kind:'b2'},
   {id:'w3',short:'Water',slot:'39–43',name:'Water',mins:4,kind:'water',
    prep:'Next: Block 3 — Last Man Home. Cones at 10 m, 20 m, 30 m and 40 m.'},
-  {id:'b3',short:'Block 3',slot:'43–51',name:'Block 3 · Last Man Home',mins:8,kind:'b3'},
+  {id:'b3',short:'Block 3',slot:'43–51',name:'Last Man Home',mins:8,kind:'b3'},
   {id:'cool',short:'Cooldown',slot:'51–60',name:'Cooldown + scores',mins:9,kind:'cool'}
 ];
 
 const LADDER=['10 squats','10 push-ups','10 sit-ups','10 walking lunges each leg','20 mountain climbers'];
-const BANK=[['Squats',75],['Push-ups',50],['Sit-ups',50],['Inch worms',20],['Walking lunges',30],['Burpees',15]];
+const BANK=[['Squats',75],['Push-ups',50],['Sit-ups',50],['Inch worms',20],['Lunges',30],['Burpees',15]];
 const BANK_TOTAL=BANK.reduce((a,b)=>a+b[1],0);
 const WARM=[
   '3 min easy walk-jog around the field',
@@ -130,7 +137,7 @@ const WARM=[
 ];
 const COOL=['Walking lap','Quads · 30 s','Hamstrings · 30 s','Hip flexors · 30 s','Chest · 30 s','Calves · 30 s'];
 const PAIRS=[['Red','Blue'],['North','South'],['Hawks','Wolves'],['Home','Away']];
-const ROSTER='Bernard, Juan, Toon &nbsp;·&nbsp; Jan, Luuk, Gert Jan';
+const MEMBERS=[['Bernard','Juan','Toon'],['Jan','Luuk','Gert Jan']];
 
 // ---------- state ----------
 // Slices: 'host' owns phase, timers, names, checklists, resets.
@@ -145,6 +152,7 @@ function fresh(){
     v:2,
     phase:0,
     teams:PAIRS[Math.floor(Math.random()*PAIRS.length)].slice(),
+    members:MEMBERS.map(m=>m.slice()),
     timers,
     warm:WARM.map(()=>false),
     cool:COOL.map(()=>false),
@@ -175,14 +183,14 @@ function save(){
 }
 let S=load();
 let confirmUntil=0;
-let roomOpen=!S.room;
+let roomOpen=false;
 let roomMsg='';
 
 function ownsSlice(n){return n==='host'?S.own.host:!!S.own.team[+n[4]];}
 function setOwn(n,v){if(n==='host')S.own.host=v;else S.own.team[+n[4]]=v;}
 function sliceLabel(n){return n==='host'?'the clock':S.teams[+n[4]];}
 function sliceOut(n){
-  if(n==='host')return {by:DEVICE,phase:S.phase,timers:S.timers,teams:S.teams,warm:S.warm,cool:S.cool,resets:S.resets};
+  if(n==='host')return {by:DEVICE,phase:S.phase,timers:S.timers,teams:S.teams,members:S.members,warm:S.warm,cool:S.cool,resets:S.resets};
   const t=+n[4];
   return {by:DEVICE,b1:S.b1[t],b2:{counts:S.b2.counts[t],fin:S.b2.fin[t]},b3:{home:S.b3.home[t]}};
 }
@@ -203,6 +211,7 @@ function sliceIn(n,d){
   if(n==='host'){
     const prev=S.resets||{};
     S.phase=d.phase;S.timers=d.timers;S.teams=d.teams;S.warm=d.warm;S.cool=d.cool;S.resets=d.resets;
+    if(d.members)S.members=d.members;
     PHASES.forEach(p=>{if(!S.timers[p.id])S.timers[p.id]=freshTimer();});
     // follow the host's resets for the team slices this phone owns
     Object.keys(d.resets).forEach(k=>{if(prev[k]!==d.resets[k])clearTeams(k,true);});
@@ -454,15 +463,18 @@ function roomCard(){
   </div>`;
 }
 
+function memberName(ti,i){return (S.members[ti]&&S.members[ti][i])||'';}
 function bodyWarm(){
   const H=S.own.host;
+  const team=ti=>`
+    <input type="text" class="teamname" data-team="${ti}" value="${esc(S.teams[ti])}" aria-label="Team ${ti+1} name" ${dis(H)}>
+    <div class="members">${[0,1,2].map(i=>`<input type="text" class="member" data-member="${ti}:${i}" value="${esc(memberName(ti,i))}" placeholder="Runner ${i+1}" autocomplete="off" ${dis(H)}>`).join('')}</div>`;
+  const prompt=(!S.room&&!roomOpen&&sbConfigured())?`<button class="slim" data-a="room">Share this session across phones</button>`:'';
   return `
-  <div class="card"><h3>Teams</h3>
-    <div class="row">
-      <input type="text" data-team="0" value="${esc(S.teams[0])}" aria-label="Team 1 name" ${dis(H)}>
-      <input type="text" data-team="1" value="${esc(S.teams[1])}" aria-label="Team 2 name" ${dis(H)}>
-    </div>
-    <p class="muted">${ROSTER}</p>
+  ${prompt}
+  <div class="card"><h3>Teams <span class="muted">runner order</span></h3>
+    ${team(0)}${team(1)}
+    <p class="muted">Mix the fitness levels across both teams. The order here is the relay order in Block 1.</p>
   </div>
   <div class="card"><h3>Not scored. Everyone together.</h3>
     ${checklist('warm',WARM,S.warm)}
@@ -483,6 +495,7 @@ function bodyB1(){
       <div style="flex:0 0 auto;padding-right:.6rem"><div class="big-n">${x.legs}</div><div class="muted">legs done</div></div>
       <div>
         <div><strong>Leg ${x.legs+1}:</strong> ${LADDER[x.legs%LADDER.length]}</div>
+        <div class="next">Out now: <strong>${esc(memberName(ti,x.runner)||('Runner '+(x.runner+1)))}</strong></div>
         <div class="dots">${[0,1,2].map(i=>`<i class="${i<x.runner?'on':''}"></i>`).join('')}</div>
         <div class="muted">${x.runner}/3 runners back</div>
       </div>
@@ -522,6 +535,7 @@ function bodyB2(){
       <li>Split the reps however you want across the 3 of you.</li>
       <li>Only one man on a given exercise at a time. All 3 can work on different exercises at once.</li>
       <li>Count out loud. One man calls the running total.</li>
+      <li>Lunges: each leg counts as 1.</li>
     </ul>
     <p class="muted">Score: first team finished. If neither finishes, most total reps at the 12 minute cap.</p>
     <button class="ghost" data-a="resetblock" ${dis(S.own.host)}>Reset block 2</button>
@@ -742,6 +756,11 @@ document.addEventListener('input',ev=>{
     S.teams[+inp.dataset.team]=inp.value.trim()||('Team '+(+inp.dataset.team+1));
     save();
   }
+  if(inp.dataset.member){
+    const [ti,i]=inp.dataset.member.split(':').map(Number);
+    S.members[ti][i]=inp.value.trim();
+    save();
+  }
 });
 document.addEventListener('change',ev=>{
   const inp=ev.target;
@@ -759,7 +778,7 @@ document.addEventListener('change',ev=>{
     if(inp.checked)pushOwned(true);
     render();
   }
-  if(inp.dataset.team!=null)render();
+  if(inp.dataset.team!=null||inp.dataset.member)render();
 });
 
 // ?room=CODE in the URL joins as a viewer
