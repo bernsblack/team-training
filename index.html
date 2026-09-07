@@ -80,6 +80,20 @@ td,th{padding:.45rem .2rem;text-align:left;border-top:1px solid #eee}
 th{font-size:.9rem;color:#666}
 td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 td.win{font-weight:800;color:#2e7d32}
+.rescard{background:#111;color:#fff;text-align:center;padding:.65rem .8rem}
+.rescard .rc-head{display:flex;align-items:flex-start;justify-content:center;gap:.5rem}
+.rescard .rc-team{flex:1;min-width:0}
+.rescard .rc-name{font-size:1.1rem;font-weight:800;line-height:1.15;overflow-wrap:break-word}
+.rescard .rc-mem{font-size:.72rem;color:#aaa;margin-top:.15rem;line-height:1.25}
+.rescard .rc-vs{font-size:.75rem;color:#777;flex:0 0 auto}
+.rescard .rc-tbl{width:100%;border-collapse:collapse;margin:.35rem 0 0}
+.rescard .rc-tbl td{padding:.22rem .1rem;border-top:1px solid #333;font-size:.82rem;color:#ddd}
+.rescard .rc-tbl td.n{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;color:#fff}
+.rescard .rc-tbl td.win{color:#66bb6a}
+.rescard .rc-wins{font-size:2.1rem;font-weight:800;margin:.2rem 0;font-variant-numeric:tabular-nums}
+.rescard .rc-verdict{font-size:.92rem;font-weight:600;margin-bottom:.4rem}
+.rescard .rc-share{width:100%;min-height:44px;font-size:.95rem;margin-top:.45rem;background:#fff;color:#111}
+.rescard .rc-pre{white-space:pre-wrap;text-align:left;background:#000;color:#eee;padding:.5rem;border-radius:10px;font-size:.72rem;margin-top:.45rem}
 details summary{cursor:pointer;font-size:1.05rem;padding:.2rem 0}
 details summary{list-style:none}
 details summary::-webkit-details-marker{display:none}
@@ -187,6 +201,8 @@ let S=load();
 let confirmUntil=0;
 let roomOpen=false;
 let roomMsg='';
+let shareMsg='';
+let shareFallback=null;
 
 function ownsSlice(n){return n==='host'?S.own.host:!!S.own.team[+n[4]];}
 function setOwn(n,v){if(n==='host')S.own.host=v;else S.own.team[+n[4]]=v;}
@@ -591,7 +607,54 @@ function bodyB3(t){
 }
 
 function bodyCool(){
-  return `<div class="card"><h3>Cooldown</h3>${checklist('cool',COOL,S.cool)}</div>`;
+  return `${resultsCard()}<div class="card"><h3>Cooldown</h3>${checklist('cool',COOL,S.cool)}</div>`;
+}
+
+// plain text summary, for navigator.share / clipboard / manual copy
+function resultsText(){
+  const sc=scores();
+  const b2v=i=>sc.fin[i]!=null?`${sc.reps[i]} reps, finished ${fmt(sc.fin[i])}`:`${sc.reps[i]} / ${BANK_TOTAL} reps`;
+  const b3v=i=>sc.home[i]!=null?fmtS(sc.home[i]):'not finished';
+  const verdict=verdictText(sc);
+  const teamLine=ti=>{
+    const mem=S.members[ti].filter(Boolean).join(', ');
+    return `${S.teams[ti]}${mem?' ('+mem+')':''}`;
+  };
+  return [
+    `${teamLine(0)} vs ${teamLine(1)}`,
+    `Block 1 - Relay Ladder: ${sc.legs[0]} legs vs ${sc.legs[1]} legs`,
+    `Block 2 - Bank the Reps: ${b2v(0)} vs ${b2v(1)}`,
+    `Block 3 - Last Man Home: ${b3v(0)} vs ${b3v(1)}`,
+    `Blocks won: ${sc.wins[0]} - ${sc.wins[1]}`,
+    verdict
+  ].join('\n');
+}
+function verdictText(sc){
+  if(sc.wins[0]===sc.wins[1])return sc.wins[0]===0?'No block scored yet.':'Level on blocks won.';
+  return `${S.teams[sc.wins[0]>sc.wins[1]?0:1]} wins ${Math.max(...sc.wins)}-${Math.min(...sc.wins)}.`;
+}
+
+function resultsCard(){
+  const sc=scores();
+  const b2v=i=>sc.fin[i]!=null?`${sc.reps[i]} · ${fmt(sc.fin[i])}`:`${sc.reps[i]} / ${BANK_TOTAL}`;
+  const b3v=i=>sc.home[i]!=null?fmtS(sc.home[i]):'—';
+  const cell=(v,w,i)=>`<td class="n ${w===i?'win':''}">${v}</td>`;
+  const membersLine=ti=>esc(S.members[ti].filter(Boolean).join(', '));
+  const teamCol=ti=>`<div class="rc-team"><div class="rc-name">${esc(S.teams[ti])}</div><div class="rc-mem">${membersLine(ti)}</div></div>`;
+  return `
+  <div class="card rescard">
+    <div class="rc-head">${teamCol(0)}<div class="rc-vs">vs</div>${teamCol(1)}</div>
+    <div class="rc-wins">${sc.wins[0]} – ${sc.wins[1]}</div>
+    <div class="rc-verdict">${esc(verdictText(sc))}</div>
+    <table class="rc-tbl">
+      <tr><td>Block 1 · legs</td>${cell(sc.legs[0],sc.w1,0)}${cell(sc.legs[1],sc.w1,1)}</tr>
+      <tr><td>Block 2 · reps</td>${cell(b2v(0),sc.w2,0)}${cell(b2v(1),sc.w2,1)}</tr>
+      <tr><td>Block 3 · time</td>${cell(b3v(0),sc.w3,0)}${cell(b3v(1),sc.w3,1)}</tr>
+    </table>
+    <button class="rc-share" data-a="share">Share results</button>
+    ${shareMsg?`<p class="muted" style="text-align:center">${esc(shareMsg)}</p>`:''}
+    ${shareFallback?`<pre class="rc-pre">${esc(shareFallback)}</pre>`:''}
+  </div>`;
 }
 
 function scoreboard(open){
@@ -653,7 +716,7 @@ function render(){
       <button data-a="resettimer" class="ghost" style="flex:0 0 auto" ${dis(H&&e>0)}>Reset timer</button>
     </div>
     ${body}
-    ${S.phase>=2?scoreboard(p.kind==='cool'):''}
+    ${p.kind==='cool'?'':(S.phase>=2?scoreboard(false):'')}
     ${p.kind==='cool'?resetAllBtn():''}
   </main>
   <nav class="foot">
@@ -765,6 +828,18 @@ document.addEventListener('click',ev=>{
     case 'b3home':S.b3.home[ti]=elapsed(t);break;
     case 'b3undo':S.b3.home[ti]=null;break;
     case 'resetblock':resetBlock(p.kind);break;
+    case 'share':{
+      const text=resultsText();
+      shareMsg='';shareFallback=null;
+      if(navigator.share){
+        navigator.share({title:'Team Training results',text}).catch(()=>{});
+      }else if(navigator.clipboard&&navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(()=>{shareMsg='Copied';render();},()=>{shareFallback=text;render();});
+      }else{
+        shareFallback=text;
+      }
+      break;
+    }
     case 'resetall':
       if(confirmUntil>now()){
         confirmUntil=0;
