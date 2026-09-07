@@ -1,0 +1,779 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#111111">
+<title>Team Training</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{font-size:17px}
+body{margin:0;font-family:-apple-system,system-ui,"Segoe UI",Roboto,sans-serif;background:#f4f4f0;color:#111;padding-bottom:6.5rem}
+button{font:inherit;border:0;border-radius:12px;min-height:56px;padding:0 1rem;background:#111;color:#fff;font-weight:700;font-size:1.1rem;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+button:disabled{opacity:.35}
+button.sec{background:#ddd;color:#111}
+button.ghost{background:transparent;color:#555;min-height:40px;font-weight:600;font-size:.95rem}
+button.danger{background:#c62828}
+button.big{width:100%;min-height:72px;font-size:1.4rem}
+button:active:not(:disabled){transform:scale(.97)}
+header{position:sticky;top:0;background:#111;color:#fff;padding:.6rem .8rem;padding-top:calc(.6rem + env(safe-area-inset-top));z-index:2}
+header .ph{display:flex;justify-content:space-between;align-items:center;gap:.6rem}
+header .ph strong{font-size:1.15rem}
+header .slot{color:#aaa;font-size:.9rem;white-space:nowrap}
+.pill{display:inline-flex;align-items:center;gap:.4rem;min-height:32px;padding:0 .7rem;border-radius:999px;background:#333;color:#eee;font-size:.85rem;font-weight:600;white-space:nowrap}
+.pill i{width:9px;height:9px;border-radius:50%;background:#888}
+.pill i.on{background:#43a047}.pill i.connecting{background:#fbc02d}.pill i.error{background:#e53935}
+.strip{display:flex;gap:4px;overflow-x:auto;margin-top:.55rem;scrollbar-width:none}
+.strip::-webkit-scrollbar{display:none}
+.strip button{flex:0 0 auto;min-height:32px;font-size:.8rem;padding:0 .6rem;border-radius:8px;background:#333;color:#bbb;font-weight:600}
+.strip button.on{background:#fff;color:#111}
+.strip button.done{background:#222;color:#666}
+.strip button:disabled{opacity:.6}
+.strip button.on:disabled{opacity:1}
+main{padding:.8rem}
+.clock{font-size:4.6rem;font-weight:800;text-align:center;font-variant-numeric:tabular-nums;line-height:1;margin:.5rem 0 .6rem}
+.clock.over{color:#c62828}
+.bar{height:8px;background:#ddd;border-radius:4px;overflow:hidden}
+.bar i{display:block;height:100%;background:#111;width:0;transition:width .2s linear}
+.bar i.warn{background:#e65100}
+.bar i.ok{background:#2e7d32}
+.row{display:flex;gap:.6rem;margin:.6rem 0}
+.row>*{flex:1;min-width:0}
+.card{background:#fff;border-radius:16px;padding:.9rem;margin:.8rem 0;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.card.room{border:2px solid #111}
+.card h3{margin:0 0 .5rem;font-size:1.05rem;display:flex;justify-content:space-between;align-items:baseline}
+.card p{margin:.4rem 0}
+.card ol,.card ul{margin:.3rem 0;padding-left:1.3rem}
+.big-n{font-size:3rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.code{font-size:2.4rem;font-weight:800;letter-spacing:.2em;font-variant-numeric:tabular-nums}
+.muted{color:#666;font-size:.9rem}
+.err{color:#c62828;font-weight:600}
+.fin{color:#2e7d32;font-weight:700}
+.rep{display:flex;align-items:center;gap:.4rem;padding:.35rem 0;border-top:1px solid #eee}
+.rep .nm{flex:1;font-weight:600}
+.rep .ct{font-variant-numeric:tabular-nums;min-width:4.4rem;text-align:right;font-weight:700}
+.rep button{min-height:46px;min-width:46px;padding:0 .6rem;font-size:1rem;border-radius:10px}
+.rep.ok .ct{color:#2e7d32}
+label.chk{display:flex;gap:.7rem;align-items:center;padding:.6rem 0;border-top:1px solid #eee;font-size:1.05rem}
+label.chk:first-of-type{border-top:0}
+label.chk input{width:1.5rem;height:1.5rem;flex:0 0 auto}
+label.chk.done{color:#999;text-decoration:line-through}
+input[type=text]{font:inherit;font-weight:700;width:100%;padding:.6rem;border:1px solid #ccc;border-radius:10px;background:#fff;min-height:56px}
+input[type=text]:disabled{background:#f4f4f0;color:#666}
+input.codein{text-transform:uppercase;letter-spacing:.2em;font-size:1.3rem;text-align:center}
+.dots{display:flex;gap:6px;margin:.4rem 0}
+.dots i{width:14px;height:14px;border-radius:50%;background:#ddd}
+.dots i.on{background:#111}
+table{width:100%;border-collapse:collapse;margin-top:.4rem}
+td,th{padding:.45rem .2rem;text-align:left;border-top:1px solid #eee}
+th{font-size:.9rem;color:#666}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td.win{font-weight:800;color:#2e7d32}
+details summary{cursor:pointer;font-size:1.05rem;padding:.2rem 0}
+details summary::-webkit-details-marker{display:none}
+details summary::before{content:"▸ ";color:#888}
+details[open] summary::before{content:"▾ "}
+.link{word-break:break-all;font-size:.85rem;color:#444;background:#f4f4f0;padding:.5rem;border-radius:8px}
+nav.foot{position:fixed;bottom:0;left:0;right:0;display:flex;gap:.6rem;padding:.6rem .8rem;padding-bottom:calc(.6rem + env(safe-area-inset-bottom));background:#f4f4f0;border-top:1px solid #ddd;z-index:2}
+nav.foot button{flex:1}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script async src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" onload="window.__sbLoaded&&window.__sbLoaded()"></script>
+<script>
+(function(){
+'use strict';
+
+// ---------- Supabase config (rooms) ----------
+// Project URL and anon public key from Supabase → Project Settings → API.
+// Leave both empty to run the page in local-only mode.
+const SUPABASE_URL='';
+const SUPABASE_KEY='';
+
+const KEY='team-training-v1';
+// A stable id per phone, so a room can tell whose write a row is.
+const DEVICE=(()=>{
+  try{
+    let d=localStorage.getItem(KEY+'-device');
+    if(!d){d=Math.random().toString(36).slice(2,10);localStorage.setItem(KEY+'-device',d);}
+    return d;
+  }catch(e){return Math.random().toString(36).slice(2,10);}
+})();
+
+const PHASES=[
+  {id:'warm',short:'Warm-up',slot:'0–9',name:'Warm-up',mins:9,kind:'warm'},
+  {id:'w1',short:'Water',slot:'9–12',name:'Water',mins:3,kind:'water',
+   prep:'Next: Block 1 — Relay Ladder. Set a cone 30 m out. Each team lines up at the start.'},
+  {id:'b1',short:'Block 1',slot:'12–22',name:'Block 1 · Relay Ladder',mins:8,kind:'b1'},
+  {id:'w2',short:'Water',slot:'22–26',name:'Water',mins:4,kind:'water',
+   prep:'Next: Block 2 — Bank the Reps. 12 minute cap. Teams plan their split now.'},
+  {id:'b2',short:'Block 2',slot:'26–39',name:'Block 2 · Bank the Reps',mins:12,kind:'b2'},
+  {id:'w3',short:'Water',slot:'39–43',name:'Water',mins:4,kind:'water',
+   prep:'Next: Block 3 — Last Man Home. Cones at 10 m, 20 m, 30 m and 40 m.'},
+  {id:'b3',short:'Block 3',slot:'43–51',name:'Block 3 · Last Man Home',mins:8,kind:'b3'},
+  {id:'cool',short:'Cooldown',slot:'51–60',name:'Cooldown + scores',mins:9,kind:'cool'}
+];
+
+const LADDER=['10 squats','10 push-ups','10 sit-ups','10 walking lunges each leg','20 mountain climbers'];
+const BANK=[['Squats',75],['Push-ups',50],['Sit-ups',50],['Inch worms',20],['Walking lunges',30],['Burpees',15]];
+const BANK_TOTAL=BANK.reduce((a,b)=>a+b[1],0);
+const WARM=[
+  '3 min easy walk-jog around the field',
+  'Leg swings: front/back, side/side',
+  'Arm circles, hip openers, ankle rolls',
+  'Round 1: 8 squats, 4 push-ups, 8 walking lunges, 10 jumping jacks',
+  'Round 2: same again'
+];
+const COOL=['Walking lap','Quads · 30 s','Hamstrings · 30 s','Hip flexors · 30 s','Chest · 30 s','Calves · 30 s'];
+const PAIRS=[['Red','Blue'],['North','South'],['Hawks','Wolves'],['Home','Away']];
+const ROSTER='Bernard, Juan, Toon &nbsp;·&nbsp; Jan, Luuk, Gert Jan';
+
+// ---------- state ----------
+// Slices: 'host' owns phase, timers, names, checklists, resets.
+// 'team0' / 'team1' each own that team's counters. One phone may own several.
+const SLICES=['host','team0','team1'];
+function freshTimer(){return {startAt:null,acc:0,running:false};}
+function freshTeam(){return {b1:{legs:0,runner:0},b2:{counts:BANK.map(()=>0),fin:null},b3:{home:null}};}
+function fresh(){
+  const timers={};
+  PHASES.forEach(p=>timers[p.id]=freshTimer());
+  return {
+    v:2,
+    phase:0,
+    teams:PAIRS[Math.floor(Math.random()*PAIRS.length)].slice(),
+    timers,
+    warm:WARM.map(()=>false),
+    cool:COOL.map(()=>false),
+    resets:{all:0,b1:0,b2:0,b3:0},
+    b1:[{legs:0,runner:0},{legs:0,runner:0}],
+    b2:{counts:[BANK.map(()=>0),BANK.map(()=>0)],fin:[null,null]},
+    b3:{home:[null,null]},
+    room:null,
+    own:{host:true,team:[true,true]}
+  };
+}
+function load(){
+  try{
+    const s=JSON.parse(localStorage.getItem(KEY));
+    if(s&&(s.v===1||s.v===2)){
+      const f=fresh();
+      Object.keys(f).forEach(k=>{if(s[k]===undefined)s[k]=f[k];});
+      PHASES.forEach(p=>{if(!s.timers[p.id])s.timers[p.id]=freshTimer();});
+      s.v=2;
+      return s;
+    }
+  }catch(e){}
+  return fresh();
+}
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}
+  schedulePush();
+}
+let S=load();
+let confirmUntil=0;
+let roomOpen=!S.room;
+let roomMsg='';
+
+function ownsSlice(n){return n==='host'?S.own.host:!!S.own.team[+n[4]];}
+function setOwn(n,v){if(n==='host')S.own.host=v;else S.own.team[+n[4]]=v;}
+function sliceLabel(n){return n==='host'?'the clock':S.teams[+n[4]];}
+function sliceOut(n){
+  if(n==='host')return {by:DEVICE,phase:S.phase,timers:S.timers,teams:S.teams,warm:S.warm,cool:S.cool,resets:S.resets};
+  const t=+n[4];
+  return {by:DEVICE,b1:S.b1[t],b2:{counts:S.b2.counts[t],fin:S.b2.fin[t]},b3:{home:S.b3.home[t]}};
+}
+// A row from another phone for a slice this phone owns means that phone
+// claimed it. The newest claim wins; this phone yields and follows.
+function receive(slice,data){
+  if(!slice||!data||data.by===DEVICE)return false;
+  if(ownsSlice(slice)){
+    setOwn(slice,false);
+    delete lastPushed[slice];
+    roomMsg='Another phone took over '+sliceLabel(slice)+'.';
+  }
+  sliceIn(slice,data);
+  return true;
+}
+function sliceIn(n,d){
+  if(!d)return;
+  if(n==='host'){
+    const prev=S.resets||{};
+    S.phase=d.phase;S.timers=d.timers;S.teams=d.teams;S.warm=d.warm;S.cool=d.cool;S.resets=d.resets;
+    PHASES.forEach(p=>{if(!S.timers[p.id])S.timers[p.id]=freshTimer();});
+    // follow the host's resets for the team slices this phone owns
+    Object.keys(d.resets).forEach(k=>{if(prev[k]!==d.resets[k])clearTeams(k,true);});
+    return;
+  }
+  const t=+n[4];
+  S.b1[t]=d.b1;S.b2.counts[t]=d.b2.counts;S.b2.fin[t]=d.b2.fin;S.b3.home[t]=d.b3.home;
+}
+function clearTeams(k,onlyOwned){
+  [0,1].forEach(t=>{
+    if(onlyOwned&&!S.own.team[t])return;
+    const f=freshTeam();
+    if(k==='all'||k==='b1')S.b1[t]=f.b1;
+    if(k==='all'||k==='b2'){S.b2.counts[t]=f.b2.counts;S.b2.fin[t]=f.b2.fin;}
+    if(k==='all'||k==='b3')S.b3.home[t]=f.b3.home;
+  });
+}
+
+// ---------- timers ----------
+const now=()=>Date.now();
+function elapsed(t){return t.acc+(t.running?now()-t.startAt:0);}
+function startT(t){if(!t.running){t.startAt=now();t.running=true;}}
+function pauseT(t){if(t.running){t.acc+=now()-t.startAt;t.running=false;t.startAt=null;}}
+function resetT(t){Object.assign(t,freshTimer());}
+function cur(){const p=PHASES[S.phase];return {p,t:S.timers[p.id],dur:p.mins*60000};}
+function autoStart(t){if(S.own.host&&!t.running&&t.acc===0){startT(t);keepAwake();}}
+
+function fmt(ms){
+  const neg=ms<0;ms=Math.abs(ms);
+  const s=Math.floor(ms/1000);
+  return (neg?'−':'')+Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+}
+function fmtS(ms){
+  ms=Math.max(0,ms);
+  const s=Math.floor(ms/1000), d=Math.floor((ms%1000)/100);
+  return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')+'.'+d;
+}
+
+// ---------- audio / wake lock ----------
+let ac=null, audioUnlocked=false;
+function unlockAudio(){
+  if(audioUnlocked)return;
+  try{
+    ac=ac||new (window.AudioContext||window.webkitAudioContext)();
+    if(ac.state==='suspended')ac.resume();
+    // play a silent buffer inside the gesture so iOS lets later beeps through
+    const b=ac.createBuffer(1,1,22050),src=ac.createBufferSource();
+    src.buffer=b;src.connect(ac.destination);src.start(0);
+    audioUnlocked=true;
+  }catch(e){}
+}
+function beep(n){
+  try{
+    if(navigator.vibrate)navigator.vibrate(Array(n).fill(200).flatMap(v=>[v,120]));
+    if(!ac)return;
+    if(ac.state==='suspended')ac.resume();
+    for(let i=0;i<n;i++){
+      const o=ac.createOscillator(),g=ac.createGain();
+      o.type='square';o.frequency.value=880;
+      o.connect(g);g.connect(ac.destination);
+      const t0=ac.currentTime+i*0.3;
+      g.gain.setValueAtTime(0.0001,t0);
+      g.gain.exponentialRampToValueAtTime(0.4,t0+0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001,t0+0.22);
+      o.start(t0);o.stop(t0+0.25);
+    }
+  }catch(e){}
+}
+let wakeLock=null;
+async function keepAwake(){
+  try{
+    if(!('wakeLock' in navigator)||wakeLock)return;
+    wakeLock=await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release',()=>{wakeLock=null;});
+  }catch(e){}
+}
+function anyRunning(){return Object.values(S.timers).some(t=>t.running);}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'){
+    if(anyRunning())keepAwake();
+    if(S.room&&conn==='on')roomSync();
+    render();
+  }
+});
+
+// ---------- rooms (Supabase) ----------
+let sb=null, chan=null, conn='off', pushTimer=null, lastPushed={}, roomRows=-1;
+function sbConfigured(){return !!(SUPABASE_URL&&SUPABASE_KEY);}
+function sbReady(){
+  if(sb)return true;
+  if(!sbConfigured()||!window.supabase)return false;
+  sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+  return true;
+}
+window.__sbLoaded=function(){if(S.room)roomConnect();else render();};
+function newCode(){
+  const A='ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let c='';for(let i=0;i<4;i++)c+=A[Math.floor(Math.random()*A.length)];
+  return c;
+}
+function roomConnect(){
+  if(!S.room||!sbReady())return;
+  if(chan){sb.removeChannel(chan);chan=null;}
+  conn='connecting';roomRows=-1;renderStatus();
+  chan=sb.channel('room:'+S.room)
+    .on('postgres_changes',{event:'*',schema:'public',table:'room_slices',filter:'code=eq.'+S.room},payload=>{
+      const row=payload.new;
+      if(!row||!receive(row.slice,row.data))return;
+      save();render();
+    })
+    .subscribe(status=>{
+      if(status==='SUBSCRIBED'){conn='on';roomSync();}
+      else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')conn='error';
+      else if(status==='CLOSED')conn='off';
+      renderStatus();
+    });
+}
+async function roomSync(){
+  if(!S.room||!sb)return;
+  const {data,error}=await sb.from('room_slices').select('slice,data').eq('code',S.room);
+  if(error){conn='error';roomMsg=error.message;renderStatus();return;}
+  roomRows=(data||[]).length;
+  (data||[]).forEach(r=>receive(r.slice,r.data));
+  lastPushed={};
+  save();render();
+  pushOwned(true);
+}
+function schedulePush(){
+  if(!S.room||!sb)return;
+  clearTimeout(pushTimer);
+  pushTimer=setTimeout(()=>pushOwned(false),150);
+}
+function pushOwned(force){
+  if(!S.room||!sb||(conn!=='on'&&!force))return;
+  const rows=[];
+  SLICES.forEach(n=>{
+    if(!ownsSlice(n))return;
+    const d=sliceOut(n), j=JSON.stringify(d);
+    if(!force&&lastPushed[n]===j)return;
+    lastPushed[n]=j;
+    rows.push({code:S.room,slice:n,data:d,updated_at:new Date().toISOString()});
+  });
+  if(!rows.length)return;
+  sb.from('room_slices').upsert(rows).then(({error})=>{
+    if(error){conn='error';roomMsg=error.message;rows.forEach(r=>delete lastPushed[r.slice]);renderStatus();}
+    else if(conn==='error'){conn='on';roomMsg='';renderStatus();}
+  });
+}
+function joinRoom(code,asCreator){
+  S.room=code;
+  S.own=asCreator?{host:true,team:[true,true]}:{host:false,team:[false,false]};
+  lastPushed={};roomMsg='';
+  save();
+  roomConnect();
+  roomOpen=true;
+}
+function leaveRoom(){
+  if(chan&&sb){sb.removeChannel(chan);chan=null;}
+  conn='off';roomRows=-1;roomMsg='';
+  S.room=null;S.own={host:true,team:[true,true]};
+  save();
+}
+window.addEventListener('online',()=>{if(S.room)roomConnect();});
+
+// ---------- scores ----------
+// returns 0 or 1 for the winner, -1 for a tie, null when nothing is scored yet
+function lowerWins(a,b){
+  if(a==null&&b==null)return null;
+  if(a==null)return 1;
+  if(b==null)return 0;
+  if(a===b)return -1;
+  return a<b?0:1;
+}
+function higherWins(a,b){
+  if(a===0&&b===0)return null;
+  if(a===b)return -1;
+  return a>b?0:1;
+}
+function scores(){
+  const legs=S.b1.map(x=>x.legs);
+  const reps=S.b2.counts.map(c=>c.reduce((a,b)=>a+b,0));
+  const fin=S.b2.fin, home=S.b3.home;
+  const w1=higherWins(legs[0],legs[1]);
+  const w2=(fin[0]!=null||fin[1]!=null)?lowerWins(fin[0],fin[1]):higherWins(reps[0],reps[1]);
+  const w3=lowerWins(home[0],home[1]);
+  const wins=[0,0];
+  [w1,w2,w3].forEach(w=>{if(w===0||w===1)wins[w]++;});
+  return {legs,reps,fin,home,w1,w2,w3,wins};
+}
+
+// ---------- render ----------
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const dis=ok=>ok?'':'disabled';
+
+function checklist(group,items,vals){
+  return items.map((txt,i)=>`<label class="chk ${vals[i]?'done':''}"><input type="checkbox" data-chk="${group}" data-i="${i}" ${vals[i]?'checked':''} ${dis(S.own.host)}><span>${esc(txt)}</span></label>`).join('');
+}
+
+function roleText(){
+  const r=[];
+  if(S.own.host)r.push('clock');
+  S.own.team.forEach((v,i)=>{if(v)r.push(esc(S.teams[i]));});
+  return r.length?r.join(' + '):'view only';
+}
+function pill(){
+  if(!S.room)return `<span class="pill">Local</span>`;
+  return `<span class="pill"><i class="${conn}"></i>${S.room} · ${roleText()}</span>`;
+}
+function renderStatus(){
+  const el=document.getElementById('roompill');
+  if(el)el.innerHTML=pill();
+  if(roomOpen)render();
+}
+function shareLink(){
+  return location.origin+location.pathname+'?room='+S.room;
+}
+function roomCard(){
+  if(!sbConfigured())return `<div class="card room"><h3>Room</h3><p class="muted">Rooms need the Supabase URL and anon key at the top of <code>index.html</code>. The page works in local mode until then.</p></div>`;
+  if(!window.supabase)return `<div class="card room"><h3>Room</h3><p class="muted">Sync library not loaded. Check the connection and reload.</p></div>`;
+  if(!S.room)return `
+  <div class="card room"><h3>Room</h3>
+    <p class="muted">Share one session across phones. One phone runs the clock, each team counts its own reps.</p>
+    <button class="big" data-a="create">Create room</button>
+    <div class="row">
+      <input type="text" class="codein" id="codein" maxlength="4" placeholder="CODE" autocapitalize="characters" autocomplete="off">
+      <button data-a="join" style="flex:0 0 auto">Join</button>
+    </div>
+    ${roomMsg?`<p class="err">${esc(roomMsg)}</p>`:''}
+  </div>`;
+  const connText={off:'not connected',connecting:'connecting…',on:'live',error:'sync error'}[conn];
+  const empty=conn==='on'&&roomRows===0&&!S.own.host?'<p class="err">No data in this room yet. Check the code, or wait for the host phone.</p>':'';
+  return `
+  <div class="card room"><h3>Room <span class="muted">${connText}</span></h3>
+    <div class="code">${S.room}</div>
+    ${empty}
+    ${roomMsg?`<p class="err">${esc(roomMsg)}</p>`:''}
+    <p class="muted">This phone:</p>
+    <label class="chk"><input type="checkbox" data-own="host" ${S.own.host?'checked':''}><span>Runs the clock and phases</span></label>
+    <label class="chk"><input type="checkbox" data-own="team0" ${S.own.team[0]?'checked':''}><span>Counts for ${esc(S.teams[0])}</span></label>
+    <label class="chk"><input type="checkbox" data-own="team1" ${S.own.team[1]?'checked':''}><span>Counts for ${esc(S.teams[1])}</span></label>
+    <p class="muted">Send this link, or the code:</p>
+    <div class="link">${esc(shareLink())}</div>
+    <div class="row">
+      <button class="sec" data-a="copylink">Copy link</button>
+      <button class="ghost" data-a="leave">Leave room</button>
+    </div>
+  </div>`;
+}
+
+function bodyWarm(){
+  const H=S.own.host;
+  return `
+  <div class="card"><h3>Teams</h3>
+    <div class="row">
+      <input type="text" data-team="0" value="${esc(S.teams[0])}" aria-label="Team 1 name" ${dis(H)}>
+      <input type="text" data-team="1" value="${esc(S.teams[1])}" aria-label="Team 2 name" ${dis(H)}>
+    </div>
+    <p class="muted">${ROSTER}</p>
+  </div>
+  <div class="card"><h3>Not scored. Everyone together.</h3>
+    ${checklist('warm',WARM,S.warm)}
+    <p class="muted">Keep this genuinely easy. It is to get warm, not to start competing.</p>
+  </div>`;
+}
+
+function bodyWater(p){
+  return `<div class="card"><h3>Water</h3><p>${esc(p.prep)}</p></div>`;
+}
+
+function bodyB1(){
+  const cards=S.b1.map((x,ti)=>{
+    const T=S.own.team[ti];
+    return `
+  <div class="card"><h3>${esc(S.teams[ti])}${T?'':' <span class="muted">view</span>'}</h3>
+    <div class="row" style="align-items:center">
+      <div style="flex:0 0 auto;padding-right:.6rem"><div class="big-n">${x.legs}</div><div class="muted">legs done</div></div>
+      <div>
+        <div><strong>Leg ${x.legs+1}:</strong> ${LADDER[x.legs%LADDER.length]}</div>
+        <div class="dots">${[0,1,2].map(i=>`<i class="${i<x.runner?'on':''}"></i>`).join('')}</div>
+        <div class="muted">${x.runner}/3 runners back</div>
+      </div>
+    </div>
+    <button class="big" data-a="b1run" data-t="${ti}" ${dis(T)}>Runner back</button>
+    <button class="ghost" data-a="b1undo" data-t="${ti}" ${dis(T&&!(x.runner===0&&x.legs===0))}>Undo</button>
+  </div>`;}).join('');
+  return cards+`
+  <div class="card"><h3>How it runs</h3>
+    <p>One man runs at a time: 30 m out and back. On his return he does the exercise, then tags the next man. 3 runners = 1 leg.</p>
+    <ol>${LADDER.map(l=>`<li>${l}</li>`).join('')}</ol>
+    <p class="muted">Score: legs completed in 8 minutes. Part-finished legs do not count.</p>
+    <button class="ghost" data-a="resetblock" ${dis(S.own.host)}>Reset block 1</button>
+  </div>`;
+}
+
+function bodyB2(){
+  const cards=S.b2.counts.map((c,ti)=>{
+    const T=S.own.team[ti];
+    const total=c.reduce((a,b)=>a+b,0);
+    const fin=S.b2.fin[ti];
+    return `
+  <div class="card"><h3><span>${esc(S.teams[ti])}${T?'':' <span class="muted">view</span>'}</span><span class="muted">${total} / ${BANK_TOTAL}</span></h3>
+    <div class="bar"><i class="${fin!=null?'ok':''}" style="width:${Math.min(100,total/BANK_TOTAL*100)}%"></i></div>
+    ${fin!=null?`<p class="fin">Finished at ${fmt(fin)}</p>`:''}
+    ${BANK.map(([nm,tg],i)=>`
+    <div class="rep ${c[i]>=tg?'ok':''}">
+      <span class="nm">${nm}</span><span class="ct">${c[i]} / ${tg}</span>
+      <button class="sec" data-a="b2" data-t="${ti}" data-i="${i}" data-d="-1" ${dis(T&&c[i]>0)}>−</button>
+      <button data-a="b2" data-t="${ti}" data-i="${i}" data-d="1" ${dis(T)}>+1</button>
+      <button data-a="b2" data-t="${ti}" data-i="${i}" data-d="5" ${dis(T)}>+5</button>
+    </div>`).join('')}
+  </div>`;}).join('');
+  return cards+`
+  <div class="card"><h3>The rules</h3>
+    <ul>
+      <li>Split the reps however you want across the 3 of you.</li>
+      <li>Only one man on a given exercise at a time. All 3 can work on different exercises at once.</li>
+      <li>Count out loud. One man calls the running total.</li>
+    </ul>
+    <p class="muted">Score: first team finished. If neither finishes, most total reps at the 12 minute cap.</p>
+    <button class="ghost" data-a="resetblock" ${dis(S.own.host)}>Reset block 2</button>
+  </div>`;
+}
+
+function bodyB3(t){
+  const e=elapsed(t);
+  const cards=S.b3.home.map((h,ti)=>{
+    const T=S.own.team[ti];
+    return `
+  <div class="card"><h3>${esc(S.teams[ti])}${T?'':' <span class="muted">view</span>'}</h3>
+    <div class="big-n">${h!=null?fmtS(h):`<span data-live>${fmtS(e)}</span>`}</div>
+    <div class="muted">${h!=null?'last man home':t.running?'on the course':'waiting for start'}</div>
+    ${h!=null
+      ?`<button class="ghost" data-a="b3undo" data-t="${ti}" ${dis(T)}>Undo</button>`
+      :`<button class="big" data-a="b3home" data-t="${ti}" ${dis(T&&t.running)}>Last man home</button>`}
+  </div>`;}).join('');
+  return cards+`
+  <div class="card"><h3>The rule that matters</h3>
+    <p>Cones at 10 m, 20 m, 30 m and 40 m. A shuttle: run to each cone and back, in order.</p>
+    <p>All 3 run at the same time. The team time is the <strong>last man across the line</strong>. Anyone who finishes turns around and runs the last stretch in with whoever is still out there.</p>
+    <p class="muted">1 round only. The clock starts both teams together.</p>
+    <button class="ghost" data-a="resetblock" ${dis(S.own.host)}>Reset block 3</button>
+  </div>`;
+}
+
+function bodyCool(){
+  return `<div class="card"><h3>Cooldown</h3>${checklist('cool',COOL,S.cool)}</div>`;
+}
+
+function scoreboard(open){
+  const sc=scores();
+  const cell=(v,w,i)=>`<td class="n ${w===i?'win':''}">${v}</td>`;
+  const b2v=i=>sc.fin[i]!=null?`${sc.reps[i]} · ${fmt(sc.fin[i])}`:String(sc.reps[i]);
+  const b3v=i=>sc.home[i]!=null?fmtS(sc.home[i]):'—';
+  let verdict;
+  if(sc.wins[0]===sc.wins[1])verdict=sc.wins[0]===0?'No block scored yet.':'Level on blocks won.';
+  else verdict=`${esc(S.teams[sc.wins[0]>sc.wins[1]?0:1])} leads ${Math.max(...sc.wins)}–${Math.min(...sc.wins)}.`;
+  return `
+  <details class="card" ${open?'open':''}>
+    <summary><strong>Scores</strong> &nbsp;${sc.wins[0]} – ${sc.wins[1]}</summary>
+    <table>
+      <tr><th></th><th class="n">${esc(S.teams[0])}</th><th class="n">${esc(S.teams[1])}</th></tr>
+      <tr><td>Block 1 · legs</td>${cell(sc.legs[0],sc.w1,0)}${cell(sc.legs[1],sc.w1,1)}</tr>
+      <tr><td>Block 2 · reps</td>${cell(b2v(0),sc.w2,0)}${cell(b2v(1),sc.w2,1)}</tr>
+      <tr><td>Block 3 · time</td>${cell(b3v(0),sc.w3,0)}${cell(b3v(1),sc.w3,1)}</tr>
+      <tr><td><strong>Blocks won</strong></td><td class="n"><strong>${sc.wins[0]}</strong></td><td class="n"><strong>${sc.wins[1]}</strong></td></tr>
+    </table>
+    <p class="muted">${verdict}</p>
+  </details>`;
+}
+
+function resetAllBtn(){
+  const armed=confirmUntil>now();
+  return `<div class="card" style="text-align:center">
+    <button class="${armed?'danger':'ghost'}" data-a="resetall" ${dis(S.own.host)}>${armed?'Tap again to wipe everything':'Reset session'}</button>
+  </div>`;
+}
+
+function render(){
+  const {p,t,dur}=cur();
+  const H=S.own.host;
+  const e=elapsed(t), rem=dur-e;
+  const strip=PHASES.map((q,i)=>`<button data-a="goto" data-i="${i}" class="${i===S.phase?'on':i<S.phase?'done':''}" ${dis(H)}>${q.short}</button>`).join('');
+  let body;
+  switch(p.kind){
+    case 'warm':body=bodyWarm();break;
+    case 'water':body=bodyWater(p);break;
+    case 'b1':body=bodyB1();break;
+    case 'b2':body=bodyB2();break;
+    case 'b3':body=bodyB3(t);break;
+    case 'cool':body=bodyCool();break;
+  }
+  const startLabel=p.kind==='b3'?(e>0?'Resume clock':'Start shuttle'):(e>0?'Resume':`Start ${p.mins} min`);
+  const codeVal=(document.getElementById('codein')||{}).value||'';
+  document.getElementById('app').innerHTML=`
+  <header>
+    <div class="ph"><strong>${p.name}</strong><span class="slot">${p.slot} min</span><button class="ghost" style="padding:0;min-height:0;color:inherit" data-a="room" id="roompill">${pill()}</button></div>
+    <div class="strip">${strip}</div>
+  </header>
+  <main>
+    ${roomOpen?roomCard():''}
+    <div class="clock ${rem<0?'over':''}" id="clock">${p.kind==='b3'?fmtS(e):fmt(rem)}</div>
+    <div class="bar"><i id="barfill" class="${rem<60000&&rem>0?'warn':''}" style="width:${Math.min(100,e/dur*100)}%"></i></div>
+    <div class="row">
+      ${t.running?`<button data-a="pause" class="sec" ${dis(H)}>Pause</button>`:`<button data-a="start" ${dis(H)}>${startLabel}</button>`}
+      <button data-a="resettimer" class="ghost" style="flex:0 0 auto" ${dis(H&&e>0)}>Reset timer</button>
+    </div>
+    ${body}
+    ${S.phase>=2?scoreboard(p.kind==='cool'):''}
+    ${p.kind==='cool'?resetAllBtn():''}
+  </main>
+  <nav class="foot">
+    <button class="sec" data-a="prev" ${dis(H&&S.phase>0)}>‹ Back</button>
+    <button data-a="next" ${dis(H&&S.phase<PHASES.length-1)}>Next ›</button>
+  </nav>`;
+  const ci=document.getElementById('codein');
+  if(ci&&codeVal)ci.value=codeVal;
+  const on=document.querySelector('.strip .on');
+  if(on&&on.scrollIntoView)on.scrollIntoView({block:'nearest',inline:'center'});
+}
+
+// ---------- tick ----------
+// Beep flags stay local to this phone, so every phone in a room beeps.
+const fired={};
+setInterval(()=>{
+  const {p,t,dur}=cur();
+  const el=document.getElementById('clock');
+  if(!el)return;
+  const e=elapsed(t), rem=dur-e;
+  if(p.kind==='b3')el.textContent=fmtS(e);
+  else el.textContent=fmt(rem);
+  el.classList.toggle('over',rem<0);
+  const bar=document.getElementById('barfill');
+  if(bar){bar.style.width=Math.min(100,e/dur*100)+'%';bar.classList.toggle('warn',rem<60000&&rem>0);}
+  document.querySelectorAll('[data-live]').forEach(n=>n.textContent=fmtS(e));
+  if(e===0){delete fired[p.id];return;}
+  const f=fired[p.id]=fired[p.id]||{};
+  if(t.running){
+    if(!f.b60&&rem<=60000&&p.kind!=='b3'){f.b60=true;beep(1);}
+    if(!f.b0&&rem<=0){f.b0=true;beep(3);}
+  }
+},200);
+
+// ---------- actions ----------
+function go(i){
+  if(i<0||i>=PHASES.length)return;
+  pauseT(cur().t);
+  S.phase=i;
+  window.scrollTo(0,0);
+}
+function resetBlock(kind){
+  const {t}=cur();
+  resetT(t);
+  clearTeams(kind,false);
+  S.resets[kind]=(S.resets[kind]||0)+1;
+}
+
+document.addEventListener('click',ev=>{
+  const b=ev.target.closest('[data-a]');
+  if(!b||b.disabled)return;
+  unlockAudio();
+  if(anyRunning())keepAwake();
+  const a=b.dataset.a, {p,t}=cur(), ti=+b.dataset.t;
+  switch(a){
+    case 'room':roomOpen=!roomOpen;render();return;
+    case 'create':joinRoom(newCode(),true);break;
+    case 'join':{
+      const code=((document.getElementById('codein')||{}).value||'').trim().toUpperCase();
+      if(code.length!==4){roomMsg='A room code has 4 letters.';render();return;}
+      joinRoom(code,false);
+      break;
+    }
+    case 'leave':leaveRoom();break;
+    case 'copylink':{
+      const link=shareLink();
+      if(navigator.clipboard&&navigator.clipboard.writeText){
+        navigator.clipboard.writeText(link).then(()=>{roomMsg='Link copied.';render();},()=>{roomMsg='Copy failed. Select the link text instead.';render();});
+      }else roomMsg='Select the link text and copy it.';
+      break;
+    }
+    case 'start':startT(t);keepAwake();break;
+    case 'pause':pauseT(t);break;
+    case 'resettimer':
+      resetT(t);
+      if(p.kind==='b3'){S.b3.home=[null,null];S.resets.b3++;}
+      if(p.kind==='b2')S.b2.fin=[null,null];
+      break;
+    case 'prev':go(S.phase-1);break;
+    case 'next':go(S.phase+1);break;
+    case 'goto':go(+b.dataset.i);break;
+    case 'b1run':{
+      autoStart(t);
+      const x=S.b1[ti];
+      x.runner++;
+      if(x.runner>=3){x.runner=0;x.legs++;}
+      break;
+    }
+    case 'b1undo':{
+      const x=S.b1[ti];
+      if(x.runner>0)x.runner--;
+      else if(x.legs>0){x.legs--;x.runner=2;}
+      break;
+    }
+    case 'b2':{
+      autoStart(t);
+      const c=S.b2.counts[ti], i=+b.dataset.i, d=+b.dataset.d;
+      c[i]=Math.max(0,c[i]+d);
+      const done=c.every((v,k)=>v>=BANK[k][1]);
+      if(done&&S.b2.fin[ti]==null)S.b2.fin[ti]=elapsed(t);
+      if(!done)S.b2.fin[ti]=null;
+      break;
+    }
+    case 'b3home':S.b3.home[ti]=elapsed(t);break;
+    case 'b3undo':S.b3.home[ti]=null;break;
+    case 'resetblock':resetBlock(p.kind);break;
+    case 'resetall':
+      if(confirmUntil>now()){
+        confirmUntil=0;
+        const keep={room:S.room,own:S.own,teams:S.teams,resets:S.resets};
+        S=Object.assign(fresh(),keep);
+        S.resets.all++;
+        save();render();return;
+      }
+      confirmUntil=now()+3000;
+      setTimeout(render,3100);
+      break;
+    default:return;
+  }
+  save();
+  render();
+});
+
+document.addEventListener('input',ev=>{
+  const inp=ev.target;
+  if(inp.dataset.team!=null){
+    S.teams[+inp.dataset.team]=inp.value.trim()||('Team '+(+inp.dataset.team+1));
+    save();
+  }
+});
+document.addEventListener('change',ev=>{
+  const inp=ev.target;
+  if(inp.dataset.chk){
+    S[inp.dataset.chk][+inp.dataset.i]=inp.checked;
+    save();render();
+  }
+  if(inp.dataset.own){
+    const n=inp.dataset.own;
+    if(n==='host')S.own.host=inp.checked;
+    else S.own.team[+n[4]]=inp.checked;
+    delete lastPushed[n];
+    roomMsg='';
+    save();
+    if(inp.checked)pushOwned(true);
+    render();
+  }
+  if(inp.dataset.team!=null)render();
+});
+
+// ?room=CODE in the URL joins as a viewer
+try{
+  const q=new URLSearchParams(location.search).get('room');
+  if(q&&/^[A-Z]{4}$/i.test(q)&&q.toUpperCase()!==S.room){
+    S.room=q.toUpperCase();
+    S.own={host:false,team:[false,false]};
+    roomOpen=true;
+    save();
+  }
+}catch(e){}
+
+render();
+if(S.room&&window.supabase)roomConnect();
+})();
+</script>
+</body>
+</html>
