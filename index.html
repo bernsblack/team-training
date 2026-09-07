@@ -46,7 +46,9 @@ main{padding:.8rem}
 .row{display:flex;gap:.6rem;margin:.6rem 0}
 .row>*{flex:1;min-width:0}
 .card{background:#fff;border-radius:16px;padding:.9rem;margin:.8rem 0;box-shadow:0 1px 3px rgba(0,0,0,.08)}
-.card.room{border:2px solid #111}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:5;display:flex;align-items:flex-end;justify-content:center}
+.modal .card{width:100%;max-width:520px;margin:0;border-radius:20px 20px 0 0;max-height:88vh;overflow-y:auto;padding-bottom:calc(.9rem + env(safe-area-inset-bottom))}
+.lock{background:#f4f4f0;border-radius:10px;padding:.6rem .8rem;font-size:.95rem}
 .card h3{margin:0 0 .5rem;font-size:1.05rem;display:flex;justify-content:space-between;align-items:baseline}
 .card p{margin:.4rem 0}
 .card ol,.card ul{margin:.3rem 0;padding-left:1.3rem}
@@ -207,6 +209,8 @@ let shareMsg='';
 let shareFallback=null;
 
 function ownsSlice(n){return n==='host'?S.own.host:!!S.own.team[+n[4]];}
+// Roles lock once Block 1 starts, so nobody can take over mid-session.
+function locked(){return S.phase>=2;}
 function setOwn(n,v){if(n==='host')S.own.host=v;else S.own.team[+n[4]]=v;}
 function sliceLabel(n){return n==='host'?'the clock':S.teams[+n[4]];}
 function sliceOut(n){
@@ -474,10 +478,12 @@ function shareLink(){
   return location.origin+location.pathname+'?room='+S.room;
 }
 function roomCard(){
-  if(!sbConfigured())return `<div class="card room"><h3>Room</h3><p class="muted">Rooms need the Supabase URL and anon key at the top of <code>index.html</code>. The page works in local mode until then.</p></div>`;
-  if(!window.supabase)return `<div class="card room"><h3>Room</h3><p class="muted">Sync library not loaded. Check the connection and reload.</p></div>`;
+  const close=`<button class="ghost" data-a="room" style="flex:0 0 auto">Close</button>`;
+  const head=sub=>`<h3><span>Room${sub?` <span class="muted">${sub}</span>`:''}</span>${close}</h3>`;
+  if(!sbConfigured())return `<div class="card room">${head('')}<p class="muted">Rooms need the Supabase URL and anon key at the top of <code>index.html</code>. The page works in local mode until then.</p></div>`;
+  if(!window.supabase)return `<div class="card room">${head('')}<p class="muted">Sync library not loaded. Check the connection and reload.</p></div>`;
   if(!S.room)return `
-  <div class="card room"><h3>Room</h3>
+  <div class="card room">${head('')}
     <p class="muted">Share one session across phones. One phone runs the clock, each team counts its own reps.</p>
     <button class="big" data-a="create">Create room</button>
     <div class="row">
@@ -488,15 +494,17 @@ function roomCard(){
   </div>`;
   const connText={off:'not connected',connecting:'connecting…',on:'live',error:'sync error'}[conn];
   const empty=conn==='on'&&roomRows===0&&!S.own.host?'<p class="err">No data in this room yet. Check the code, or wait for the host phone.</p>':'';
+  const L=locked();
   return `
-  <div class="card room"><h3>Room <span class="muted">${connText}</span></h3>
+  <div class="card room">${head(connText)}
     <div class="code">${S.room}</div>
     ${empty}
     ${roomMsg?`<p class="err">${esc(roomMsg)}</p>`:''}
     <p class="muted">This phone:</p>
-    <label class="chk"><input type="checkbox" data-own="host" ${S.own.host?'checked':''}><span>Runs the clock and phases</span></label>
-    <label class="chk"><input type="checkbox" data-own="team0" ${S.own.team[0]?'checked':''}><span>Counts for ${esc(S.teams[0])}</span></label>
-    <label class="chk"><input type="checkbox" data-own="team1" ${S.own.team[1]?'checked':''}><span>Counts for ${esc(S.teams[1])}</span></label>
+    <label class="chk"><input type="checkbox" data-own="host" ${S.own.host?'checked':''} ${dis(!L)}><span>Runs the clock and phases</span></label>
+    <label class="chk"><input type="checkbox" data-own="team0" ${S.own.team[0]?'checked':''} ${dis(!L)}><span>Counts for ${esc(S.teams[0])}</span></label>
+    <label class="chk"><input type="checkbox" data-own="team1" ${S.own.team[1]?'checked':''} ${dis(!L)}><span>Counts for ${esc(S.teams[1])}</span></label>
+    ${L?`<p class="lock">Roles are locked from Block 1 on. Set them during the warm-up or the first water break.</p>`:''}
     <p class="muted">Send this link, or the code:</p>
     <div class="link">${esc(shareLink())}</div>
     <div class="row">
@@ -709,7 +717,6 @@ function render(){
     <div class="strip">${strip}</div>
   </header>
   <main>
-    ${roomOpen?roomCard():''}
     <div class="clock ${rem<0?'over':''}" id="clock">${p.kind==='b3'?fmtS(e):fmt(rem)}</div>
     <div class="bar"><i id="barfill" class="${rem<60000&&rem>0?'warn':''}" style="width:${Math.min(100,e/dur*100)}%"></i></div>
     <div class="row">
@@ -723,7 +730,8 @@ function render(){
   <nav class="foot">
     <button class="sec" data-a="prev" ${dis(H&&S.phase>0)}>‹ Back</button>
     <button data-a="next" ${dis(H&&S.phase<PHASES.length-1)}>Next ›</button>
-  </nav>`;
+  </nav>
+  ${roomOpen?`<div class="modal" data-a="room">${roomCard()}</div>`:''}`;
   const ci=document.getElementById('codein');
   if(ci&&codeVal)ci.value=codeVal;
   const on=document.querySelector('.strip .on');
@@ -769,6 +777,8 @@ function resetBlock(kind){
 document.addEventListener('click',ev=>{
   const b=ev.target.closest('[data-a]');
   if(!b||b.disabled)return;
+  // a tap inside the room sheet on something other than a button stays put
+  if(b.classList.contains('modal')&&ev.target!==b)return;
   unlockAudio();
   if(anyRunning())keepAwake();
   const a=b.dataset.a, {p,t}=cur(), ti=+b.dataset.t;
@@ -917,6 +927,7 @@ document.addEventListener('change',ev=>{
     save();render();
   }
   if(inp.dataset.own){
+    if(locked()){inp.checked=ownsSlice(inp.dataset.own);return;}
     const n=inp.dataset.own;
     if(n==='host')S.own.host=inp.checked;
     else S.own.team[+n[4]]=inp.checked;

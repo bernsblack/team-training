@@ -81,6 +81,10 @@ ok(B.state().phase===4,'B followed A to block 2');
 ok(B.$('[data-a="b2"][data-t="0"][data-d="1"]').disabled,'B cannot count team 0');
 ok(!B.$('[data-a="b2"][data-t="1"][data-d="1"]').disabled,'B can count team 1');
 ok(B.txt().includes('view'),'B shows view label on team 0');
+ok(B.$('[data-own="team0"]').disabled,'roles locked on B from Block 1');
+B.check('[data-own="team0"]',true);
+ok(B.state().own.team[0]===false,'locked role change ignored');
+ok(B.txt().includes('Roles are locked'),'lock note shown');
 
 // B counts for team 1, A sees it
 B.click('[data-a="b2"][data-t="1"][data-i="0"][data-d="5"]');
