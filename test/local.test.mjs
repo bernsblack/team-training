@@ -76,7 +76,8 @@ s=state(); ok(s.b3.home[0]>s.b3.home[1],'team 0 later');
 click('[data-a="goto"][data-i="7"]');
 const tbl=$('table').textContent;
 ok($$('td.win').length===3,'three block winners marked: '+$$('td.win').map(e=>e.textContent).join('|'));
-ok(/^(Red|North|Hawks|Home) leads 2–1\.$/.test($('details p').textContent),'verdict: '+ $('details p').textContent);
+ok(/^(Red|North|Hawks|Home) wins 2-1\.$/.test($('.rc-verdict').textContent),'verdict: '+ $('.rc-verdict').textContent);
+ok(txt().includes('Bernard, Piet, Toon')&&txt().includes('Jan, Luuk, Gert Jan'),'results card lists members');
 // reload persistence
 dom=new JSDOM(html,{...opts,storageQuota:10000000});
 // share storage by copying
