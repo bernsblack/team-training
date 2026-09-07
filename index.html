@@ -18,10 +18,9 @@ button.sec{background:#ddd;color:#111}
 button.ghost{background:transparent;color:#555;min-height:40px;font-weight:600;font-size:.95rem}
 button.danger{background:#c62828}
 button.big{width:100%;min-height:72px;font-size:1.4rem}
-button.hold{position:relative;overflow:hidden}
-button.hold .holdfill{position:absolute;top:0;left:0;bottom:0;width:0%;background:rgba(198,40,40,.6);pointer-events:none}
+button.hold{position:relative;overflow:hidden;width:100%;min-height:48px;background:#e8e8e4;color:#333}
+button.hold .holdfill{position:absolute;top:0;left:0;bottom:0;width:0%;background:rgba(198,40,40,.35);pointer-events:none}
 button.hold .holdlabel{position:relative;z-index:1}
-button.hold.holding .holdlabel{color:#fff}
 button:active:not(:disabled){transform:scale(.97)}
 header{position:sticky;top:0;background:#111;color:#fff;padding:.6rem .8rem;padding-top:calc(.6rem + env(safe-area-inset-top));z-index:2}
 header .ph{display:flex;justify-content:space-between;align-items:center;gap:.6rem}
