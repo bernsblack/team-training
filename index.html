@@ -24,7 +24,7 @@ button.hold .holdlabel{position:relative;z-index:1}
 button:active:not(:disabled){transform:scale(.97)}
 header{position:sticky;top:0;background:#111;color:#fff;padding:.6rem .8rem;padding-top:calc(.6rem + env(safe-area-inset-top));z-index:2}
 header .ph{display:flex;justify-content:space-between;align-items:center;gap:.6rem}
-header .ph strong{font-size:1.15rem}
+header .ph strong{font-size:1.15rem;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 header .slot{color:#aaa;font-size:.9rem;white-space:nowrap}
 .pill{display:inline-flex;align-items:center;gap:.4rem;min-height:32px;padding:0 .7rem;border-radius:999px;background:#333;color:#eee;font-size:.85rem;font-weight:600;white-space:nowrap}
 .pill i{width:9px;height:9px;border-radius:50%;background:#888}
@@ -50,6 +50,9 @@ main{padding:.8rem}
 .modal .card{width:100%;max-width:520px;margin:0;border-radius:20px 20px 0 0;max-height:88vh;overflow-y:auto;padding-bottom:calc(.9rem + env(safe-area-inset-bottom))}
 .explain summary{font-weight:700}
 .explain p,.explain ol,.explain ul{margin:.4rem 0}
+.peer{display:flex;justify-content:space-between;gap:.6rem;padding:.45rem 0;border-top:1px solid #eee}
+.peer .who{font-weight:600}
+.peer .role{color:#666;font-size:.9rem;text-align:right}
 .lock{background:#f4f4f0;border-radius:10px;padding:.6rem .8rem;font-size:.95rem}
 .card h3{margin:0 0 .5rem;font-size:1.05rem;display:flex;justify-content:space-between;align-items:baseline}
 .card p{margin:.4rem 0}
@@ -125,6 +128,14 @@ const SUPABASE_URL='https://uhaotjjjrfpbcfsyqobo.supabase.co';
 const SUPABASE_KEY='sb_publishable_7U_qGhTjwI2C3OE_-n4wLA_r4xtcnuI';
 
 const KEY='team-training-v1';
+// This phone's display name, kept per device so a session reset keeps it.
+let myName='';
+try{myName=localStorage.getItem('team-training-name')||'';}catch(e){}
+function setName(v){
+  myName=String(v||'').trim().slice(0,24);
+  try{localStorage.setItem('team-training-name',myName);}catch(e){}
+  trackMe();
+}
 // A stable id per phone, so a room can tell whose write a row is.
 const DEVICE=(()=>{
   try{
@@ -228,6 +239,7 @@ function receive(slice,data){
     setOwn(slice,false);
     delete lastPushed[slice];
     roomMsg='Another phone took over '+sliceLabel(slice)+'.';
+    trackMe();
   }
   sliceIn(slice,data);
   return true;
@@ -348,6 +360,17 @@ document.addEventListener('visibilitychange',()=>{
 
 // ---------- rooms (Supabase) ----------
 let sb=null, chan=null, conn='off', pushTimer=null, lastPushed={}, roomRows=-1;
+let peers=[];   // who is connected to the room right now, from Realtime Presence
+function trackMe(){
+  if(!chan||conn!=='on')return;
+  try{chan.track({name:myName||'Unnamed phone',own:S.own,device:DEVICE});}catch(e){}
+}
+function readPeers(){
+  if(!chan)return [];
+  const st=chan.presenceState()||{};
+  return Object.keys(st).map(k=>st[k][st[k].length-1]).filter(Boolean)
+    .sort((a,b)=>(a.device===DEVICE?-1:b.device===DEVICE?1:0)||String(a.name).localeCompare(String(b.name)));
+}
 function sbConfigured(){return !!(SUPABASE_URL&&SUPABASE_KEY);}
 function sbReady(){
   if(sb)return true;
@@ -365,7 +388,9 @@ function roomConnect(){
   if(!S.room||!sbReady())return;
   if(chan){sb.removeChannel(chan);chan=null;}
   conn='connecting';roomRows=-1;renderStatus();
-  chan=sb.channel('room:'+S.room)
+  peers=[];
+  chan=sb.channel('room:'+S.room,{config:{presence:{key:DEVICE}}})
+    .on('presence',{event:'sync'},()=>{peers=readPeers();renderStatus();})
     .on('postgres_changes',{event:'*',schema:'public',table:'room_slices',filter:'code=eq.'+S.room},payload=>{
       const row=payload.new;
       if(!row||!receive(row.slice,row.data))return;
@@ -374,7 +399,7 @@ function roomConnect(){
     .subscribe(status=>{
       // The realtime worker can attach a few seconds after SUBSCRIBED and
       // miss writes in that window, so sync once more shortly after.
-      if(status==='SUBSCRIBED'){conn='on';roomSync();setTimeout(roomSync,6000);}
+      if(status==='SUBSCRIBED'){conn='on';trackMe();roomSync();setTimeout(roomSync,6000);}
       else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT')conn='error';
       else if(status==='CLOSED')conn='off';
       renderStatus();
@@ -421,7 +446,7 @@ function joinRoom(code,asCreator){
 }
 function leaveRoom(){
   if(chan&&sb){sb.removeChannel(chan);chan=null;}
-  conn='off';roomRows=-1;roomMsg='';
+  conn='off';roomRows=-1;roomMsg='';peers=[];
   S.room=null;S.own={host:true,team:[true,true]};
   save();
 }
@@ -461,15 +486,27 @@ function checklist(group,items,vals){
   return items.map((txt,i)=>`<label class="chk ${vals[i]?'done':''}"><input type="checkbox" data-chk="${group}" data-i="${i}" ${vals[i]?'checked':''} ${dis(S.own.host)}><span>${esc(txt)}</span></label>`).join('');
 }
 
-function roleText(){
+function roleTextFor(own){
   const r=[];
-  if(S.own.host)r.push('clock');
-  S.own.team.forEach((v,i)=>{if(v)r.push(esc(S.teams[i]));});
+  if(!own)return 'view only';
+  if(own.host)r.push('clock');
+  (own.team||[]).forEach((v,i)=>{if(v)r.push(esc(S.teams[i]));});
   return r.length?r.join(' + '):'view only';
 }
+function roleText(){return roleTextFor(S.own);}
 function pill(){
   if(!S.room)return `<span class="pill">Local</span>`;
-  return `<span class="pill"><i class="${conn}"></i>${S.room} · ${roleText()}</span>`;
+  const n=peers.length?` · ${peers.length}👤`:'';
+  return `<span class="pill"><i class="${conn}"></i>${S.room}${n}</span>`;
+}
+function nameRow(){
+  const list=`<datalist id="namelist">${S.members.flat().filter(Boolean).map(n=>`<option value="${esc(n)}">`).join('')}</datalist>`;
+  return `<div class="row"><input type="text" id="namein" list="namelist" placeholder="Your name" value="${esc(myName)}" autocomplete="off" maxlength="24"><button class="sec" data-a="savename" style="flex:0 0 auto">Save</button></div>${list}`;
+}
+function peerList(){
+  if(!peers.length)return `<p class="muted">Connected: nobody yet.</p>`;
+  return `<p class="muted">Connected · ${peers.length}</p>`+peers.map(p=>`
+    <div class="peer"><span class="who">${esc(p.name)}${p.device===DEVICE?' <span class="muted">(you)</span>':''}</span><span class="role">${roleTextFor(p.own)}</span></div>`).join('');
 }
 function renderStatus(){
   const el=document.getElementById('roompill');
@@ -487,6 +524,8 @@ function roomCard(){
   if(!S.room)return `
   <div class="card room">${head('')}
     <p class="muted">Share one session across phones. One phone runs the clock, each team counts its own reps.</p>
+    <p class="muted">Your name, so the others see who is connected:</p>
+    ${nameRow()}
     <button class="big" data-a="create">Create room</button>
     <div class="row">
       <input type="text" class="codein" id="codein" maxlength="4" placeholder="CODE" autocapitalize="characters" autocomplete="off">
@@ -502,6 +541,9 @@ function roomCard(){
     <div class="code">${S.room}</div>
     ${empty}
     ${roomMsg?`<p class="err">${esc(roomMsg)}</p>`:''}
+    ${myName?'':'<p class="err">Enter your name so the others see you.</p>'}
+    ${nameRow()}
+    ${peerList()}
     <p class="muted">This phone:</p>
     <label class="chk"><input type="checkbox" data-own="host" ${S.own.host?'checked':''} ${dis(!L)}><span>Runs the clock and phases</span></label>
     <label class="chk"><input type="checkbox" data-own="team0" ${S.own.team[0]?'checked':''} ${dis(!L)}><span>Counts for ${esc(S.teams[0])}</span></label>
@@ -715,6 +757,8 @@ function render(){
   }
   const startLabel=p.kind==='b3'?(e>0?'Resume clock':'Start shuttle'):(e>0?'Resume':`Start ${p.mins} min`);
   const codeVal=(document.getElementById('codein')||{}).value||'';
+  const nameEl=document.getElementById('namein');
+  const nameVal=nameEl&&nameEl===document.activeElement?nameEl.value:null;
   document.getElementById('app').innerHTML=`
   <header>
     <div class="ph"><strong>${p.name}</strong><span class="slot">${p.slot} min</span><button class="ghost" style="padding:0;min-height:0;color:inherit" data-a="room" id="roompill">${pill()}</button></div>
@@ -738,6 +782,8 @@ function render(){
   ${roomOpen?`<div class="modal" data-a="room">${roomCard()}</div>`:''}`;
   const ci=document.getElementById('codein');
   if(ci&&codeVal)ci.value=codeVal;
+  const ni=document.getElementById('namein');
+  if(ni&&nameVal!=null){ni.value=nameVal;ni.focus();}
   const on=document.querySelector('.strip .on');
   if(on&&on.scrollIntoView)on.scrollIntoView({block:'nearest',inline:'center'});
 }
@@ -788,8 +834,15 @@ document.addEventListener('click',ev=>{
   const a=b.dataset.a, {p,t}=cur(), ti=+b.dataset.t;
   switch(a){
     case 'room':roomOpen=!roomOpen;render();return;
-    case 'create':joinRoom(newCode(),true);break;
+    case 'savename':setName((document.getElementById('namein')||{}).value);roomMsg='';break;
+    case 'create':
+      setName((document.getElementById('namein')||{}).value);
+      if(!myName){roomMsg='Enter your name first.';render();return;}
+      joinRoom(newCode(),true);
+      break;
     case 'join':{
+      setName((document.getElementById('namein')||{}).value);
+      if(!myName){roomMsg='Enter your name first.';render();return;}
       const code=((document.getElementById('codein')||{}).value||'').trim().toUpperCase();
       if(code.length!==4){roomMsg='A room code has 4 letters.';render();return;}
       joinRoom(code,false);
@@ -939,6 +992,7 @@ document.addEventListener('change',ev=>{
     roomMsg='';
     save();
     if(inp.checked)pushOwned(true);
+    trackMe();
     render();
   }
   if(inp.dataset.team!=null||inp.dataset.member)render();

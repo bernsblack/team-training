@@ -6,11 +6,21 @@ const ok=(c,m)=>{if(!c){console.error('FAIL',m);process.exitCode=1;}else console
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 
 // ---- stub server shared by all phones ----
-const server={rows:[],phones:[]};
+const server={rows:[],phones:[],presence:{}};
+function syncAll(){server.phones.filter(p=>p.presenceCb).forEach(p=>setTimeout(()=>p.presenceCb(),0));}
 function stubFor(phone){
   return {createClient(){return {
-    channel(){const ch={on(ev,f,cb){phone.handler=cb;return ch;},subscribe(cb){setTimeout(()=>cb('SUBSCRIBED'),0);return ch;}};return ch;},
-    removeChannel(){phone.handler=null;},
+    channel(name,cfg){
+      phone.key=cfg.config.presence.key;
+      const ch={
+        on(ev,f,cb){if(ev==='presence')phone.presenceCb=cb;else phone.handler=cb;return ch;},
+        subscribe(cb){setTimeout(()=>cb('SUBSCRIBED'),0);return ch;},
+        track(meta){server.presence[phone.key]=[JSON.parse(JSON.stringify(meta))];syncAll();return Promise.resolve('ok');},
+        presenceState(){return JSON.parse(JSON.stringify(server.presence));}
+      };
+      return ch;
+    },
+    removeChannel(){phone.handler=null;phone.presenceCb=null;delete server.presence[phone.key];syncAll();},
     from(){return {
       select(){return {eq:async(k,code)=>({data:server.rows.filter(r=>r.code===code).map(r=>({slice:r.slice,data:JSON.parse(JSON.stringify(r.data))})),error:null})};},
       upsert(rows){
@@ -30,6 +40,7 @@ function phone(url){
   ph.txt=()=>ph.$('#app').textContent;
   ph.state=()=>JSON.parse(ph.w.localStorage.getItem('team-training-v1'));
   ph.check=(s,v)=>{const el=ph.$(s);el.checked=v;el.dispatchEvent(new ph.w.Event('change',{bubbles:true}));};
+  ph.type=(s,v)=>{const el=ph.$(s);if(!el)throw new Error('no el '+s);el.value=v;};
   ph.hold=async s=>{const el=ph.$(s);if(!el)throw new Error('no el '+s);el.dispatchEvent(new ph.w.Event('pointerdown',{bubbles:true}));await sleep(1600);el.dispatchEvent(new ph.w.Event('pointerup',{bubbles:true}));};
   server.phones.push(ph);
   return ph;
@@ -41,7 +52,12 @@ ok(!A.$('[data-a="create"]'),'room card closed by default');
 A.click('[data-a="room"]');
 ok(A.$('[data-a="create"]'),'A sees create room');
 A.click('[data-a="create"]');
+ok((A.state()||{}).room==null&&A.txt().includes('Enter your name first'),'create needs a name');
+A.type('#namein','Bernard');
+A.click('[data-a="create"]');
 await sleep(50);
+ok(A.w.localStorage.getItem('team-training-name')==='Bernard','name saved per device');
+ok(A.txt().includes('Bernard')&&A.txt().includes('(you)'),'A lists itself as connected');
 const code=A.state().room;
 ok(/^[A-Z]{4}$/.test(code),'A has a 4-letter code: '+code);
 ok(server.rows.length===3,'A pushed 3 slices on subscribe');
@@ -52,6 +68,11 @@ ok(A.state().own.host&&A.state().own.team[0]&&A.state().own.team[1],'creator own
 const B=phone('http://localhost/?room='+code);
 await sleep(50);
 ok(B.state().room===code,'B joined via URL');
+ok(B.txt().includes('Enter your name so the others see you'),'B is asked for a name');
+B.type('#namein','Jan');B.click('[data-a="savename"]');
+await sleep(50);
+ok(A.txt().includes('Jan')&&A.$('#roompill').textContent.includes('2👤'),'A sees Jan connected: '+A.$('#roompill').textContent);
+ok(B.txt().includes('Bernard')&&B.txt().includes('clock + '),'B sees Bernard with the clock role');
 ok(!B.state().own.host,'B is a viewer');
 ok(B.state().teams[0]===A.state().teams[0],'B got A team names: '+B.state().teams.join('/'));
 ok(B.state().members[1][2]==='Gert Jan','B got A members');
@@ -73,6 +94,10 @@ ok(server.rows.find(r=>r.slice==='team1'),'B pushed team1 slice');
 await sleep(50);
 ok(A.state().own.team[1]===false&&A.state().own.team[0]===true,'A yielded team 1, kept team 0');
 ok(A.txt().includes('took over'),'A shows the takeover message');
+{const me=[...A.d.querySelectorAll('.peer')].find(e=>e.textContent.includes('(you)'));
+ok(me&&!/Blue|South|Wolves|Away/.test(me.textContent),'A re-announced without team 1: '+me.textContent.replace(/\s+/g,' ').trim());}
+{const jan=[...A.d.querySelectorAll('.peer')].find(e=>e.textContent.includes('Jan'));
+ok(jan&&/(Red|Blue|North|South|Hawks|Wolves|Home|Away)/.test(jan.textContent),'A sees Jan with a team role: '+(jan?jan.textContent.trim():'none'));}
 
 // A moves to block 2; B follows
 A.click('[data-a="goto"][data-i="4"]');
@@ -130,4 +155,6 @@ ok(B.state().phase===0&&B.state().b3.home[1]===null,'B followed the session rese
 // A leaves
 A.click('[data-a="leave"]');
 ok(A.state().room===null&&A.state().own.host,'A left and owns everything again');
+await sleep(50);
+ok(!B.txt().includes('Bernard'),'B no longer lists Bernard');
 process.exit(process.exitCode||0);
