@@ -18,6 +18,10 @@ button.sec{background:#ddd;color:#111}
 button.ghost{background:transparent;color:#555;min-height:40px;font-weight:600;font-size:.95rem}
 button.danger{background:#c62828}
 button.big{width:100%;min-height:72px;font-size:1.4rem}
+button.hold{position:relative;overflow:hidden}
+button.hold .holdfill{position:absolute;top:0;left:0;bottom:0;width:0%;background:rgba(198,40,40,.6);pointer-events:none}
+button.hold .holdlabel{position:relative;z-index:1}
+button.hold.holding .holdlabel{color:#fff}
 button:active:not(:disabled){transform:scale(.97)}
 header{position:sticky;top:0;background:#111;color:#fff;padding:.6rem .8rem;padding-top:calc(.6rem + env(safe-area-inset-top));z-index:2}
 header .ph{display:flex;justify-content:space-between;align-items:center;gap:.6rem}
@@ -182,7 +186,6 @@ function save(){
   schedulePush();
 }
 let S=load();
-let confirmUntil=0;
 let roomOpen=false;
 let roomMsg='';
 
@@ -508,7 +511,7 @@ function bodyB1(){
     <p>One man runs at a time: 30 m out and back. On his return he does the exercise, then tags the next man. 3 runners = 1 leg.</p>
     <ol>${LADDER.map(l=>`<li>${l}</li>`).join('')}</ol>
     <p class="muted">Score: legs completed in 8 minutes. Part-finished legs do not count.</p>
-    <button class="ghost" data-a="resetblock" ${dis(S.own.host)}>Reset block 1</button>
+    <button class="ghost hold" data-a="resetblock" data-hold="resetblock" ${dis(S.own.host)}><i class="holdfill"></i><span class="holdlabel">Hold to reset block 1</span></button>
   </div>`;
 }
 
@@ -538,7 +541,7 @@ function bodyB2(){
       <li>Lunges: each leg counts as 1.</li>
     </ul>
     <p class="muted">Score: first team finished. If neither finishes, most total reps at the 12 minute cap.</p>
-    <button class="ghost" data-a="resetblock" ${dis(S.own.host)}>Reset block 2</button>
+    <button class="ghost hold" data-a="resetblock" data-hold="resetblock" ${dis(S.own.host)}><i class="holdfill"></i><span class="holdlabel">Hold to reset block 2</span></button>
   </div>`;
 }
 
@@ -559,7 +562,7 @@ function bodyB3(t){
     <p>Cones at 10 m, 20 m, 30 m and 40 m. A shuttle: run to each cone and back, in order.</p>
     <p>All 3 run at the same time. The team time is the <strong>last man across the line</strong>. Anyone who finishes turns around and runs the last stretch in with whoever is still out there.</p>
     <p class="muted">1 round only. The clock starts both teams together.</p>
-    <button class="ghost" data-a="resetblock" ${dis(S.own.host)}>Reset block 3</button>
+    <button class="ghost hold" data-a="resetblock" data-hold="resetblock" ${dis(S.own.host)}><i class="holdfill"></i><span class="holdlabel">Hold to reset block 3</span></button>
   </div>`;
 }
 
@@ -590,9 +593,8 @@ function scoreboard(open){
 }
 
 function resetAllBtn(){
-  const armed=confirmUntil>now();
   return `<div class="card" style="text-align:center">
-    <button class="${armed?'danger':'ghost'}" data-a="resetall" ${dis(S.own.host)}>${armed?'Tap again to wipe everything':'Reset session'}</button>
+    <button class="ghost hold" data-a="resetall" data-hold="resetall" ${dis(S.own.host)}><i class="holdfill"></i><span class="holdlabel">Hold to reset session</span></button>
   </div>`;
 }
 
@@ -732,23 +734,63 @@ document.addEventListener('click',ev=>{
     }
     case 'b3home':S.b3.home[ti]=elapsed(t);break;
     case 'b3undo':S.b3.home[ti]=null;break;
-    case 'resetblock':resetBlock(p.kind);break;
-    case 'resetall':
-      if(confirmUntil>now()){
-        confirmUntil=0;
-        const keep={room:S.room,own:S.own,teams:S.teams,resets:S.resets};
-        S=Object.assign(fresh(),keep);
-        S.resets.all++;
-        save();render();return;
-      }
-      confirmUntil=now()+3000;
-      setTimeout(render,3100);
-      break;
     default:return;
   }
   save();
   render();
 });
+
+// ---------- hold-to-reset ----------
+const HOLD_MS=1500;
+let holdEl=null,holdAction=null,holdStart=0,holdInt=null,holdTimer=null;
+function holdFill(el){return el&&el.querySelector('.holdfill');}
+function cancelHold(){
+  if(holdInt){clearInterval(holdInt);holdInt=null;}
+  if(holdTimer){clearTimeout(holdTimer);holdTimer=null;}
+  if(holdEl){
+    const f=holdFill(holdEl);
+    if(f)f.style.width='0%';
+    holdEl.classList.remove('holding');
+  }
+  holdEl=null;holdAction=null;
+}
+function startHold(el,action){
+  cancelHold();
+  holdEl=el;holdAction=action;holdStart=now();
+  el.classList.add('holding');
+  const f=holdFill(el);
+  holdInt=setInterval(()=>{
+    const pct=Math.min(100,(now()-holdStart)/HOLD_MS*100);
+    if(f)f.style.width=pct+'%';
+  },30);
+  holdTimer=setTimeout(()=>completeHold(el,action),HOLD_MS);
+}
+function completeHold(el,action){
+  cancelHold();
+  if(navigator.vibrate)navigator.vibrate(30);
+  if(action==='resetall'){
+    const keep={room:S.room,own:S.own,teams:S.teams,resets:S.resets};
+    S=Object.assign(fresh(),keep);
+    S.resets.all++;
+  }else if(action==='resetblock'){
+    resetBlock(cur().p.kind);
+  }else return;
+  save();render();
+}
+function holdTarget(ev){return ev.target.closest&&ev.target.closest('[data-hold]');}
+document.addEventListener('pointerdown',ev=>{
+  const el=holdTarget(ev);
+  if(!el||el.disabled)return;
+  unlockAudio();
+  startHold(el,el.dataset.hold);
+});
+document.addEventListener('pointerup',()=>{cancelHold();});
+document.addEventListener('pointercancel',()=>{cancelHold();});
+document.addEventListener('pointerleave',ev=>{
+  const el=holdTarget(ev);
+  if(el&&el===holdEl)cancelHold();
+},true);
+window.addEventListener('scroll',()=>cancelHold(),true);
 
 document.addEventListener('input',ev=>{
   const inp=ev.target;
