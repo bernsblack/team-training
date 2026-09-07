@@ -86,11 +86,17 @@ dom.window.localStorage.setItem('team-training-v1',JSON.stringify(state()));
 dom.window.eval(html.match(/<script>([\s\S]*)<\/script>/)[1]);
 const d2=dom.window.document;
 ok(d2.querySelector('#app').textContent.includes('Cooldown'),'reload restores phase');
-// reset session double tap
-d2.querySelector('[data-a="resetall"]').click();
-ok(d2.querySelector('[data-a="resetall"]').textContent.includes('Tap again'),'reset arms');
-d2.querySelector('[data-a="resetall"]').click();
-ok(d2.querySelector('#app').textContent.includes('Warm-up'),'reset returns to warm-up');
+// reset session: press and hold 1.5 s
+const rb=d2.querySelector('[data-hold="resetall"]');
+ok(!!rb,'reset button renders as a hold control');
+rb.dispatchEvent(new dom.window.Event('pointerdown',{bubbles:true}));
+await sleep(500);
+rb.dispatchEvent(new dom.window.Event('pointerup',{bubbles:true}));
+ok(JSON.parse(dom.window.localStorage.getItem('team-training-v1')).phase===7,'early release does not reset');
+rb.dispatchEvent(new dom.window.Event('pointerdown',{bubbles:true}));
+await sleep(1600);
+rb.dispatchEvent(new dom.window.Event('pointerup',{bubbles:true}));
+ok(JSON.parse(dom.window.localStorage.getItem('team-training-v1')).phase===0,'full hold returns to warm-up');
 ok(JSON.parse(dom.window.localStorage.getItem('team-training-v1')).b1[0].legs===0,'reset clears data');
 // overrun clock
 const st=state(); 

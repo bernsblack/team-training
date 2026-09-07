@@ -30,6 +30,7 @@ function phone(url){
   ph.txt=()=>ph.$('#app').textContent;
   ph.state=()=>JSON.parse(ph.w.localStorage.getItem('team-training-v1'));
   ph.check=(s,v)=>{const el=ph.$(s);el.checked=v;el.dispatchEvent(new ph.w.Event('change',{bubbles:true}));};
+  ph.hold=async s=>{const el=ph.$(s);if(!el)throw new Error('no el '+s);el.dispatchEvent(new ph.w.Event('pointerdown',{bubbles:true}));await sleep(1600);el.dispatchEvent(new ph.w.Event('pointerup',{bubbles:true}));};
   server.phones.push(ph);
   return ph;
 }
@@ -96,7 +97,7 @@ ok(B.state().b2.counts[0][5]===1,'B sees team 0 burpees = 1');
 ok(A.state().timers.b2.running===true,'A auto-started the block timer');
 
 // A resets block 2; B clears its own slice and pushes
-A.click('[data-a="resetblock"]');
+await A.hold('[data-hold="resetblock"]');
 await sleep(400);
 ok(A.state().b2.counts[1][0]===0,'A cleared team 1 locally');
 ok(B.state().b2.counts[1][0]===0,'B cleared its own team 1 slice');
@@ -117,7 +118,7 @@ ok(A.state().b3.home[1]>=250,'A sees team 1 home time');
 // Reset session from A propagates
 A.click('[data-a="goto"][data-i="7"]');
 await sleep(250);
-A.click('[data-a="resetall"]');A.click('[data-a="resetall"]');
+await A.hold('[data-hold="resetall"]');
 await sleep(400);
 ok(A.state().phase===0&&A.state().room===code,'A reset kept the room');
 ok(B.state().phase===0&&B.state().b3.home[1]===null,'B followed the session reset');
